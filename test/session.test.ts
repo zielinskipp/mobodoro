@@ -8,6 +8,7 @@ import {
   addMobber,
   removeMobber,
   rotateMobber,
+  handleTimerExpired,
 } from "../src/session";
 
 describe("Session management", () => {
@@ -17,9 +18,15 @@ describe("Session management", () => {
     expect(session.id).toBeDefined();
     expect(session.mobbers).toEqual([]);
     expect(session.phase).toBe("work");
+
     expect(session.timer.minutes).toBe(25);
     expect(session.timer.seconds).toBe(0);
     expect(session.timer.isRunning).toBe(false);
+
+    expect(session.duration.minutes).toBe(25);
+    expect(session.duration.seconds).toBe(0);
+    expect(session.rotationsBeforeBreak).toBe(1);
+    expect(session.rotationCount).toBe(0);
   });
 });
 
@@ -139,5 +146,94 @@ describe("Mob management", () => {
     const rotatedTwice = rotateMobber(rotatedOnce);
 
     expect(rotatedTwice.currentMobberIndex).toBe(0);
+  });
+});
+
+describe("Phase transitions", () => {
+  it("should do nothing if timer not expired", () => {
+    const session = makeSession();
+    const notExpired = {
+      ...session,
+      timer: { ...session.timer, minutes: 0, seconds: 1, isRunning: true },
+    };
+
+    const afterTick = handleTimerExpired(notExpired);
+    expect(afterTick).toEqual(notExpired);
+  });
+
+  it("should stay in work phase if rotations before break not reached", () => {
+    const session = makeSession();
+    const withMobodoroConfig = {
+      ...session,
+      timer: {
+        ...session.timer,
+        minutes: 0,
+        seconds: 0,
+      },
+      rotationsBeforeBreak: 2,
+      rotationCount: 0,
+    };
+    const withMobbers = addMobber(
+      addMobber(withMobodoroConfig, "Alice"),
+      "Bob",
+    );
+
+    const rotatedAfterSessionExpired = handleTimerExpired(withMobbers);
+
+    expect(rotatedAfterSessionExpired.phase).toBe("work");
+    expect(rotatedAfterSessionExpired.rotationCount).toBe(1);
+    expect(rotatedAfterSessionExpired.currentMobberIndex).toBe(1);
+    expect(rotatedAfterSessionExpired.timer.minutes).toBe(25);
+    expect(rotatedAfterSessionExpired.timer.seconds).toBe(0);
+  });
+
+  it("should transition to short break after required rotations", () => {
+    const session = makeSession();
+    const withMobodoroConfig = {
+      ...session,
+      timer: {
+        ...session.timer,
+        minutes: 0,
+        seconds: 0,
+      },
+      rotationsBeforeBreak: 1,
+      rotationCount: 0,
+    };
+    const withMobbers = addMobber(
+      addMobber(withMobodoroConfig, "Alice"),
+      "Bob",
+    );
+
+    const afterSessionExpired = handleTimerExpired(withMobbers);
+
+    expect(afterSessionExpired.phase).toBe("shortBreak");
+    expect(afterSessionExpired.rotationCount).toBe(0);
+    expect(afterSessionExpired.currentMobberIndex).toBe(0);
+    expect(afterSessionExpired.timer.minutes).toBe(5);
+    expect(afterSessionExpired.timer.seconds).toBe(0);
+  });
+
+  it("should return to work phase when break expires", () => {
+    const session = makeSession();
+    const onBreak = {
+      ...session,
+      phase: "shortBreak" as const,
+      timer: {
+        minutes: 0,
+        seconds: 0,
+        isRunning: false,
+      },
+      duration: {
+        minutes: 7,
+        seconds: 0,
+      },
+    };
+
+    const backToWork = handleTimerExpired(onBreak);
+
+    expect(backToWork.phase).toBe("work");
+    expect(backToWork.timer.minutes).toBe(7);
+    expect(backToWork.timer.seconds).toBe(0);
+    expect(backToWork.timer.isRunning).toBe(false);
   });
 });
