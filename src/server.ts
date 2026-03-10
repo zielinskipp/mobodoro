@@ -16,6 +16,7 @@ import {
   rotateMobber,
   tick,
   handleTimerExpired,
+  configureSession,
 } from "./session";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -136,6 +137,18 @@ export function createServer() {
           let current = registry.get(id);
           if (current) {
             current = resetTimer(current);
+            registry.set(id, current);
+            broadcast(id);
+          }
+        }
+        if (message.command === "configure") {
+          let current = registry.get(id);
+          if (current) {
+            current = configureSession(current, {
+              workMinutes: message.workMinutes,
+              breakMinutes: message.breakMinutes,
+              rotationsBeforeBreak: message.rotationsBeforeBreak,
+            });
             registry.set(id, current);
             broadcast(id);
           }

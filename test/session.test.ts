@@ -10,6 +10,7 @@ import {
   removeMobber,
   rotateMobber,
   handleTimerExpired,
+  configureSession,
 } from "../src/session";
 
 describe("Session management", () => {
@@ -28,6 +29,20 @@ describe("Session management", () => {
     expect(session.duration.seconds).toBe(0);
     expect(session.rotationsBeforeBreak).toBe(1);
     expect(session.rotationCount).toBe(0);
+  });
+
+  it("should configure session with custom durations when paused", () => {
+    const session = makeSession();
+
+    const configured = configureSession(session, {
+      workMinutes: 10,
+      breakMinutes: 3,
+      rotationsBeforeBreak: 3,
+    });
+
+    expect(configured.duration.minutes).toBe(10);
+    expect(configured.timer.minutes).toBe(10);
+    expect(configured.rotationsBeforeBreak).toBe(3);
   });
 });
 

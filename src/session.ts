@@ -19,6 +19,7 @@ export type SessionState = {
   phase: Phase;
   timer: TimerState;
   duration: Duration;
+  breakDuration: Duration;
   rotationsBeforeBreak: number;
   rotationCount: number;
 };
@@ -38,8 +39,39 @@ export function makeSession(): SessionState {
       minutes: 25,
       seconds: 0,
     },
+    breakDuration: {
+      minutes: 5,
+      seconds: 0,
+    },
     rotationsBeforeBreak: 1,
     rotationCount: 0,
+  };
+}
+
+export function configureSession(
+  session: SessionState,
+  config: {
+    workMinutes: number;
+    breakMinutes: number;
+    rotationsBeforeBreak: number;
+  },
+): SessionState {
+  return {
+    ...session,
+    duration: {
+      minutes: config.workMinutes,
+      seconds: 0,
+    },
+    breakDuration: {
+      minutes: config.breakMinutes,
+      seconds: 0,
+    },
+    timer: {
+      ...session.timer,
+      minutes: config.workMinutes,
+      seconds: 0,
+    },
+    rotationsBeforeBreak: config.rotationsBeforeBreak,
   };
 }
 
@@ -153,8 +185,7 @@ export function handleTimerExpired(session: SessionState): SessionState {
         ...session,
         phase: "shortBreak",
         timer: {
-          minutes: 5,
-          seconds: 0,
+          ...session.breakDuration,
           isRunning: false,
         },
         rotationCount: 0,

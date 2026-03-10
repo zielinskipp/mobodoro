@@ -155,6 +155,41 @@ describe("Server integration", () => {
     ws.close();
   });
 
+  it("should handle configure command", async () => {
+    const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
+    const { sessionId } = await response.json();
+
+    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+
+    // Wait for initial message
+    await new Promise<void>((resolve) => {
+      ws.once("message", () => resolve());
+    });
+
+    // Send configure command
+    ws.send(
+      JSON.stringify({
+        command: "configure",
+        workMinutes: 10,
+        breakMinutes: 3,
+        rotationsBeforeBreak: 3,
+      }),
+    );
+
+    // Should receive updated state with new configuration
+    const updated = await new Promise<any>((resolve, reject) => {
+      ws.once("message", (data) => resolve(JSON.parse(data.toString())));
+      setTimeout(() => reject(new Error("timeout")), 1000);
+    });
+
+    expect(updated.duration.minutes).toBe(10);
+    expect(updated.timer.minutes).toBe(10);
+    expect(updated.breakDuration.minutes).toBe(3);
+    expect(updated.rotationsBeforeBreak).toBe(3);
+
+    ws.close();
+  });
+
   it("should tick running timer every second and broadcast updates", async () => {
     const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
     const { sessionId } = await response.json();
