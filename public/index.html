@@ -147,6 +147,53 @@
         <button id="setTimerBtn">Set Timer</button>
       </div>
 
+      <!-- Mobbers Section -->
+      <div
+        style="
+          margin-top: 2rem;
+          padding-top: 2rem;
+          border-top: 2px solid rgba(255, 255, 255, 0.2);
+        "
+      >
+        <h2 style="font-size: 1.2rem; margin-bottom: 1rem; font-weight: 400">
+          Mob
+        </h2>
+
+        <div
+          id="currentMobber"
+          style="font-size: 1.5rem; margin-bottom: 1rem; opacity: 0.9"
+        >
+          No mobbers yet
+        </div>
+
+        <div
+          id="mobbersList"
+          style="margin-bottom: 1rem; font-size: 0.9rem; opacity: 0.7"
+        ></div>
+
+        <div class="controls" style="gap: 0.5rem; margin-bottom: 0.5rem">
+          <input
+            type="text"
+            id="mobberNameInput"
+            placeholder="Mobber name"
+            style="
+              flex: 1;
+              padding: 0.5rem;
+              border-radius: 5px;
+              border: 2px solid rgba(255, 255, 255, 0.5);
+              background: rgba(255, 255, 255, 0.2);
+              color: white;
+            "
+          />
+          <button id="addMobberBtn">Add</button>
+        </div>
+
+        <div class="controls" style="gap: 0.5rem">
+          <button id="rotateMobberBtn" style="flex: 1">Next Mobber</button>
+          <button id="removeMobberBtn">Remove Current</button>
+        </div>
+      </div>
+
       <div class="status" id="status">Connecting...</div>
     </div>
 
@@ -161,6 +208,13 @@
       const setMinutesInput = document.getElementById("setMinutes");
       const setSecondsInput = document.getElementById("setSeconds");
 
+      const currentMobberEl = document.getElementById("currentMobber");
+      const mobbersListEl = document.getElementById("mobbersList");
+      const mobberNameInput = document.getElementById("mobberNameInput");
+      const addMobberBtn = document.getElementById("addMobberBtn");
+      const rotateMobberBtn = document.getElementById("rotateMobberBtn");
+      const removeMobberBtn = document.getElementById("removeMobberBtn");
+
       let ws = null;
       let sessionId = null;
 
@@ -171,6 +225,9 @@
 
       // Update UI with session state
       function updateUI(session) {
+        // Store session for other functions to access
+        sessionStorage.setItem("currentSession", JSON.stringify(session));
+
         timerEl.textContent = formatTime(
           session.timer.minutes,
           session.timer.seconds,
@@ -189,6 +246,28 @@
         } else {
           startBtn.disabled = false;
           pauseBtn.disabled = true;
+        }
+
+        // Update mobbers display
+        if (session.mobbers && session.mobbers.length > 0) {
+          const currentMobber = session.mobbers[session.currentMobberIndex];
+          currentMobberEl.textContent = `🎯 Current: ${currentMobber}`;
+
+          // Show all mobbers with highlighting for current
+          mobbersListEl.innerHTML = session.mobbers
+            .map((mobber, index) => {
+              const isCurrent = index === session.currentMobberIndex;
+              return `<span style="${isCurrent ? "font-weight: bold; opacity: 1;" : ""}">${isCurrent ? "→ " : ""}${mobber}</span>`;
+            })
+            .join(" • ");
+
+          rotateMobberBtn.disabled = false;
+          removeMobberBtn.disabled = false;
+        } else {
+          currentMobberEl.textContent = "No mobbers yet";
+          mobbersListEl.innerHTML = "";
+          rotateMobberBtn.disabled = true;
+          removeMobberBtn.disabled = true;
         }
       }
 
@@ -258,6 +337,45 @@
               seconds,
             }),
           );
+        }
+      });
+
+      // Mobber button handlers
+      addMobberBtn.addEventListener("click", () => {
+        const name = mobberNameInput.value.trim();
+        if (name && ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ command: "addMobber", name }));
+          mobberNameInput.value = ""; // Clear input
+        }
+      });
+
+      // Allow Enter key to add mobber
+      mobberNameInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          addMobberBtn.click();
+        }
+      });
+
+      rotateMobberBtn.addEventListener("click", () => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ command: "rotateMobber" }));
+        }
+      });
+
+      removeMobberBtn.addEventListener("click", () => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          // Get current mobber name from session state
+          // We'll need to track this in a variable
+          const currentSession = JSON.parse(
+            sessionStorage.getItem("currentSession") || "{}",
+          );
+          if (currentSession.mobbers && currentSession.mobbers.length > 0) {
+            const currentMobber =
+              currentSession.mobbers[currentSession.currentMobberIndex];
+            ws.send(
+              JSON.stringify({ command: "removeMobber", name: currentMobber }),
+            );
+          }
         }
       });
 
