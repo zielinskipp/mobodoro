@@ -109,6 +109,7 @@
         <button id="startBtn">Start</button>
         <button id="pauseBtn">Pause</button>
         <button id="resetBtn">Reset</button>
+        <button id="skipBtn">Skip Phase ⏭️</button>
       </div>
 
       <!-- Configuration Section -->
@@ -282,6 +283,7 @@
       const startBtn = document.getElementById("startBtn");
       const pauseBtn = document.getElementById("pauseBtn");
       const resetBtn = document.getElementById("resetBtn");
+      const skipBtn = document.getElementById("skipBtn");
       const setTimerBtn = document.getElementById("setTimerBtn");
       const setMinutesInput = document.getElementById("setMinutes");
       const setSecondsInput = document.getElementById("setSeconds");
@@ -414,6 +416,7 @@
       startBtn.addEventListener("click", () => sendCommand("start"));
       pauseBtn.addEventListener("click", () => sendCommand("pause"));
       resetBtn.addEventListener("click", () => sendCommand("reset"));
+      skipBtn.addEventListener("click", () => sendCommand("skip"));
 
       configureBtn.addEventListener("click", () => {
         const workMinutes = parseInt(workMinutesInput.value) || 25;
