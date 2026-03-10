@@ -1,7 +1,13 @@
 import Fastify from "fastify";
 import websocket from "@fastify/websocket";
+import fastifyStatic from "@fastify/static";
+import path from "path";
+import { fileURLToPath } from "url";
 import { createRegistry } from "./registry";
 import { makeSession, startTimer, pauseTimer, resetTimer } from "./session";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export function createServer() {
   const fastify = Fastify({
@@ -9,6 +15,12 @@ export function createServer() {
   });
 
   const registry = createRegistry();
+
+  // Serve static files from public directory
+  fastify.register(fastifyStatic, {
+    root: path.join(__dirname, "..", "public"),
+    prefix: "/",
+  });
 
   // POST /sessions - Create new session
   fastify.post("/sessions", async (request, reply) => {

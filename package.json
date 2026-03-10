@@ -7,7 +7,8 @@
   "scripts": {
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "build": "tsc"
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts"
   },
   "keywords": [],
   "author": "",
@@ -15,11 +16,13 @@
   "devDependencies": {
     "@types/ws": "^8.18.1",
     "@vitest/ui": "^4.0.18",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18",
     "ws": "^8.19.0"
   },
   "dependencies": {
+    "@fastify/static": "^9.0.0",
     "@fastify/websocket": "^11.2.0",
     "fastify": "^5.7.4"
   }
