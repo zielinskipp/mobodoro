@@ -111,6 +111,84 @@
         <button id="resetBtn">Reset</button>
       </div>
 
+      <!-- Configuration Section -->
+      <div
+        style="
+          margin-top: 2rem;
+          padding: 1.5rem;
+          border-radius: 10px;
+          background: rgba(255, 255, 255, 0.1);
+        "
+      >
+        <h2 style="font-size: 1.2rem; margin-bottom: 1rem; font-weight: 400">
+          Session Configuration
+        </h2>
+        <div class="controls" style="gap: 0.5rem; flex-wrap: wrap">
+          <input
+            type="number"
+            id="workMinutes"
+            placeholder="Work (min)"
+            min="1"
+            max="60"
+            value="25"
+            style="
+              width: 100px;
+              padding: 0.5rem;
+              border-radius: 5px;
+              border: 2px solid rgba(255, 255, 255, 0.5);
+              background: rgba(255, 255, 255, 0.2);
+              color: white;
+              text-align: center;
+            "
+          />
+          <input
+            type="number"
+            id="breakMinutes"
+            placeholder="Break (min)"
+            min="1"
+            max="30"
+            value="5"
+            style="
+              width: 100px;
+              padding: 0.5rem;
+              border-radius: 5px;
+              border: 2px solid rgba(255, 255, 255, 0.5);
+              background: rgba(255, 255, 255, 0.2);
+              color: white;
+              text-align: center;
+            "
+          />
+          <input
+            type="number"
+            id="rotationsBeforeBreak"
+            placeholder="Rotations"
+            min="1"
+            max="10"
+            value="1"
+            style="
+              width: 100px;
+              padding: 0.5rem;
+              border-radius: 5px;
+              border: 2px solid rgba(255, 255, 255, 0.5);
+              background: rgba(255, 255, 255, 0.2);
+              color: white;
+              text-align: center;
+            "
+          />
+          <button id="configureBtn">Apply Config</button>
+        </div>
+        <div
+          style="
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            opacity: 0.6;
+            text-align: center;
+          "
+        >
+          Configure before starting or while paused
+        </div>
+      </div>
+
       <div class="controls" style="margin-top: 1rem; gap: 0.5rem">
         <input
           type="number"
@@ -208,6 +286,13 @@
       const setMinutesInput = document.getElementById("setMinutes");
       const setSecondsInput = document.getElementById("setSeconds");
 
+      const configureBtn = document.getElementById("configureBtn");
+      const workMinutesInput = document.getElementById("workMinutes");
+      const breakMinutesInput = document.getElementById("breakMinutes");
+      const rotationsBeforeBreakInput = document.getElementById(
+        "rotationsBeforeBreak",
+      );
+
       const currentMobberEl = document.getElementById("currentMobber");
       const mobbersListEl = document.getElementById("mobbersList");
       const mobberNameInput = document.getElementById("mobberNameInput");
@@ -238,6 +323,11 @@
             : session.phase === "shortBreak"
               ? "Short Break"
               : "Long Break";
+
+        // Update configuration inputs
+        workMinutesInput.value = session.duration.minutes;
+        breakMinutesInput.value = session.breakDuration.minutes;
+        rotationsBeforeBreakInput.value = session.rotationsBeforeBreak;
 
         // Update button states
         if (session.timer.isRunning) {
@@ -324,6 +414,24 @@
       startBtn.addEventListener("click", () => sendCommand("start"));
       pauseBtn.addEventListener("click", () => sendCommand("pause"));
       resetBtn.addEventListener("click", () => sendCommand("reset"));
+
+      configureBtn.addEventListener("click", () => {
+        const workMinutes = parseInt(workMinutesInput.value) || 25;
+        const breakMinutes = parseInt(breakMinutesInput.value) || 5;
+        const rotationsBeforeBreak =
+          parseInt(rotationsBeforeBreakInput.value) || 1;
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(
+            JSON.stringify({
+              command: "configure",
+              workMinutes,
+              breakMinutes,
+              rotationsBeforeBreak,
+            }),
+          );
+        }
+      });
 
       setTimerBtn.addEventListener("click", () => {
         const minutes = parseInt(setMinutesInput.value) || 0;
