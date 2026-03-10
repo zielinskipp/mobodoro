@@ -13,12 +13,15 @@
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "package": "npm run build && npm run create-deploy-package",
-    "create-deploy-package": "cp deployment-package.json dist/package.json && cd dist && zip -r ../mobodoro-deploy.zip . && cd .."
+    "package:tar": "npm run build && npm run create-deploy-tar",
+    "create-deploy-package": "cp deployment-package.json dist/package.json && cd dist && zip -r ../mobodoro-deploy.zip * && cd ..",
+    "create-deploy-tar": "cp deployment-package.json dist/package.json && cd dist && tar -czf ../mobodoro-deploy.tar.gz * && cd .."
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/node": "^25.4.0",
     "@types/ws": "^8.18.1",
     "@vitest/ui": "^4.0.18",
     "tsx": "^4.21.0",
