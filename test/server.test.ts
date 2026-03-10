@@ -38,7 +38,7 @@ describe("Server integration", () => {
     const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
     const { sessionId } = await response.json();
 
-    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+    const ws = new WebSocket(`${wsUrl}/ws/${sessionId}`);
 
     await new Promise<void>((resolve, reject) => {
       ws.once("open", () => resolve());
@@ -53,7 +53,7 @@ describe("Server integration", () => {
     const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
     const { sessionId } = await response.json();
 
-    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+    const ws = new WebSocket(`${wsUrl}/ws/${sessionId}`);
 
     const message = await new Promise<any>((resolve, reject) => {
       ws.once("message", (data) => resolve(JSON.parse(data.toString())));
@@ -72,7 +72,7 @@ describe("Server integration", () => {
     const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
     const { sessionId } = await response.json();
 
-    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+    const ws = new WebSocket(`${wsUrl}/ws/${sessionId}`);
 
     // Wait for initial message
     await new Promise<void>((resolve) => {
@@ -97,7 +97,7 @@ describe("Server integration", () => {
     const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
     const { sessionId } = await response.json();
 
-    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+    const ws = new WebSocket(`${wsUrl}/ws/${sessionId}`);
 
     // Wait for initial message
     await new Promise<void>((resolve) => {
@@ -122,7 +122,7 @@ describe("Server integration", () => {
     const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
     const { sessionId } = await response.json();
 
-    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+    const ws = new WebSocket(`${wsUrl}/ws/${sessionId}`);
 
     // Wait for initial message
     await new Promise<void>((resolve) => {
@@ -159,7 +159,7 @@ describe("Server integration", () => {
     const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
     const { sessionId } = await response.json();
 
-    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+    const ws = new WebSocket(`${wsUrl}/ws/${sessionId}`);
 
     // Wait for initial message
     await new Promise<void>((resolve) => {
@@ -194,7 +194,7 @@ describe("Server integration", () => {
     const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
     const { sessionId } = await response.json();
 
-    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+    const ws = new WebSocket(`${wsUrl}/ws/${sessionId}`);
 
     // Wait for initial message
     await new Promise<void>((resolve) => {
@@ -231,7 +231,7 @@ describe("Server integration", () => {
     const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
     const { sessionId } = await response.json();
 
-    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+    const ws = new WebSocket(`${wsUrl}/ws/${sessionId}`);
 
     // Wait for initial message
     await new Promise<void>((resolve) => {
@@ -284,7 +284,7 @@ describe("Server integration", () => {
     const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
     const { sessionId } = await response.json();
 
-    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+    const ws = new WebSocket(`${wsUrl}/ws/${sessionId}`);
 
     // Wait for initial message
     await new Promise<void>((resolve) => {
@@ -309,7 +309,7 @@ describe("Server integration", () => {
     const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
     const { sessionId } = await response.json();
 
-    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+    const ws = new WebSocket(`${wsUrl}/ws/${sessionId}`);
 
     // Wait for initial message
     await new Promise<void>((resolve) => {
@@ -345,7 +345,7 @@ describe("Server integration", () => {
     const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
     const { sessionId } = await response.json();
 
-    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+    const ws = new WebSocket(`${wsUrl}/ws/${sessionId}`);
 
     // Wait for initial message
     await new Promise<void>((resolve) => {
@@ -381,7 +381,7 @@ describe("Server integration", () => {
     const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
     const { sessionId } = await response.json();
 
-    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+    const ws = new WebSocket(`${wsUrl}/ws/${sessionId}`);
 
     // Wait for initial message
     await new Promise<void>((resolve) => {

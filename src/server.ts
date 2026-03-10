@@ -79,14 +79,19 @@ export function createServer() {
 
     return {
       sessionId: session.id,
-      url: `/session/${session.id}`,
+      url: `/room/${session.id}`,
     };
+  });
+
+  // GET /room/:id - Serve room HTML page
+  fastify.get("/room/:id", async (request, reply) => {
+    return reply.sendFile("room.html");
   });
 
   fastify.register(async (fastify) => {
     await fastify.register(websocket);
 
-    fastify.get("/session/:id", { websocket: true }, (socket, request) => {
+    fastify.get("/ws/:id", { websocket: true }, (socket, request) => {
       const { id } = request.params as { id: string };
       const session = registry.get(id);
 
