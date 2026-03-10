@@ -11,6 +11,7 @@ import {
   rotateMobber,
   handleTimerExpired,
   configureSession,
+  skipPhase,
 } from "../src/session";
 
 describe("Session management", () => {
@@ -272,5 +273,38 @@ describe("Phase transitions", () => {
     expect(backToWork.timer.minutes).toBe(7);
     expect(backToWork.timer.seconds).toBe(0);
     expect(backToWork.timer.isRunning).toBe(false);
+  });
+
+  it("should skip phase and transition immediately", () => {
+    const session = makeSession();
+    const withMobbers = addMobber(addMobber(session, "Alice"), "Bob");
+    const configured = configureSession(withMobbers, {
+      workMinutes: 10,
+      breakMinutes: 3,
+      rotationsBeforeBreak: 1,
+    });
+
+    // Skip work phase - should go to break
+    const afterSkip = skipPhase(configured);
+
+    expect(afterSkip.phase).toBe("shortBreak");
+    expect(afterSkip.timer.minutes).toBe(3); // break duration
+    expect(afterSkip.timer.seconds).toBe(0);
+    expect(afterSkip.rotationCount).toBe(0);
+  });
+
+  it("should skip break phase and return to work", () => {
+    const session = makeSession();
+    const onBreak = {
+      ...session,
+      phase: "shortBreak" as const,
+      timer: { minutes: 5, seconds: 30, isRunning: false },
+    };
+
+    const afterSkip = skipPhase(onBreak);
+
+    expect(afterSkip.phase).toBe("work");
+    expect(afterSkip.timer.minutes).toBe(25); // work duration
+    expect(afterSkip.timer.seconds).toBe(0);
   });
 });

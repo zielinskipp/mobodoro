@@ -376,4 +376,42 @@ describe("Server integration", () => {
 
     ws.close();
   });
+
+  it("should handle skip command", async () => {
+    const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
+    const { sessionId } = await response.json();
+
+    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+
+    // Wait for initial message
+    await new Promise<void>((resolve) => {
+      ws.once("message", () => resolve());
+    });
+
+    // Configure for quick testing: 1 rotation before break
+    ws.send(
+      JSON.stringify({
+        command: "configure",
+        workMinutes: 10,
+        breakMinutes: 3,
+        rotationsBeforeBreak: 1,
+      }),
+    );
+    await new Promise<void>((resolve) => {
+      ws.once("message", () => resolve());
+    });
+
+    // Skip work phase - should go to break
+    ws.send(JSON.stringify({ command: "skip" }));
+
+    const updated = await new Promise<any>((resolve, reject) => {
+      ws.once("message", (data) => resolve(JSON.parse(data.toString())));
+      setTimeout(() => reject(new Error("timeout")), 1000);
+    });
+
+    expect(updated.phase).toBe("shortBreak");
+    expect(updated.timer.minutes).toBe(3); // break duration
+
+    ws.close();
+  });
 });

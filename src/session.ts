@@ -213,3 +213,16 @@ export function handleTimerExpired(session: SessionState): SessionState {
 
   return session;
 }
+
+export function skipPhase(session: SessionState): SessionState {
+  // Set timer to 0:0 and trigger expiration logic
+  const expired = {
+    ...session,
+    timer: {
+      ...session.timer,
+      minutes: 0,
+      seconds: 0,
+    },
+  };
+  return handleTimerExpired(expired);
+}

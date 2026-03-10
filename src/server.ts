@@ -17,6 +17,7 @@ import {
   tick,
   handleTimerExpired,
   configureSession,
+  skipPhase,
 } from "./session";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -181,6 +182,14 @@ export function createServer() {
           let current = registry.get(id);
           if (current) {
             current = rotateMobber(current);
+            registry.set(id, current);
+            broadcast(id);
+          }
+        }
+        if (message.command === "skip") {
+          let current = registry.get(id);
+          if (current) {
+            current = skipPhase(current);
             registry.set(id, current);
             broadcast(id);
           }
