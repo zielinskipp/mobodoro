@@ -98,6 +98,21 @@ export function resetTimer(session: SessionState): SessionState {
   };
 }
 
+export function setTimer(
+  session: SessionState,
+  minutes: number,
+  seconds: number,
+): SessionState {
+  return {
+    ...session,
+    timer: {
+      minutes,
+      seconds,
+      isRunning: false,
+    },
+  };
+}
+
 export function addMobber(session: SessionState, mobber: string): SessionState {
   return {
     ...session,

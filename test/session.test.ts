@@ -5,6 +5,7 @@ import {
   startTimer,
   pauseTimer,
   resetTimer,
+  setTimer,
   addMobber,
   removeMobber,
   rotateMobber,
@@ -104,6 +105,27 @@ describe("Timer controls", () => {
     expect(reset.timer.minutes).toBe(25);
     expect(reset.timer.seconds).toBe(0);
     expect(reset.timer.isRunning).toBe(false);
+  });
+
+  it("should set timer to specific time", () => {
+    const session = makeSession();
+
+    const withCustomTime = setTimer(session, 0, 1);
+
+    expect(withCustomTime.timer.minutes).toBe(0);
+    expect(withCustomTime.timer.seconds).toBe(1);
+    expect(withCustomTime.timer.isRunning).toBe(false);
+  });
+
+  it("should stop timer when setting custom time", () => {
+    const session = makeSession();
+    const running = startTimer(session);
+
+    const withCustomTime = setTimer(running, 5, 30);
+
+    expect(withCustomTime.timer.minutes).toBe(5);
+    expect(withCustomTime.timer.seconds).toBe(30);
+    expect(withCustomTime.timer.isRunning).toBe(false);
   });
 });
 

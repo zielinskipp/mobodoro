@@ -191,4 +191,57 @@ describe("Server integration", () => {
 
     ws.close();
   });
+
+  it("should handle timer expiration and transition to break phase", async () => {
+    const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
+    const { sessionId } = await response.json();
+
+    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+
+    // Wait for initial message
+    await new Promise<void>((resolve) => {
+      ws.once("message", () => resolve());
+    });
+
+    // Set timer to 0:1 (one second remaining) using test helper command
+    ws.send(
+      JSON.stringify({
+        command: "setTimer",
+        minutes: 0,
+        seconds: 1,
+      }),
+    );
+
+    // Wait for setTimer confirmation
+    const timerSet = await new Promise<any>((resolve) => {
+      ws.once("message", (data) => resolve(JSON.parse(data.toString())));
+    });
+
+    expect(timerSet.timer.minutes).toBe(0);
+    expect(timerSet.timer.seconds).toBe(1);
+
+    // Start the timer
+    ws.send(JSON.stringify({ command: "start" }));
+
+    // Wait for start confirmation
+    await new Promise<void>((resolve) => {
+      ws.once("message", () => resolve());
+    });
+
+    // Wait for tick that expires the timer (should happen within ~1 second)
+    // This should trigger handleTimerExpired and transition to break phase
+    const expired = await new Promise<any>((resolve, reject) => {
+      ws.once("message", (data) => resolve(JSON.parse(data.toString())));
+      setTimeout(() => reject(new Error("No expiration received")), 1500);
+    });
+
+    // After expiration with rotationsBeforeBreak=1, should go to short break
+    expect(expired.timer.minutes).toBe(5);
+    expect(expired.timer.seconds).toBe(0);
+    expect(expired.timer.isRunning).toBe(false);
+    expect(expired.phase).toBe("shortBreak");
+    expect(expired.rotationCount).toBe(0);
+
+    ws.close();
+  });
 });

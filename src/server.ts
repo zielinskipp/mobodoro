@@ -10,7 +10,9 @@ import {
   startTimer,
   pauseTimer,
   resetTimer,
+  setTimer,
   tick,
+  handleTimerExpired,
 } from "./session";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -47,6 +49,12 @@ export function createServer() {
       let session = registry.get(sessionId);
       if (session && session.timer.isRunning) {
         session = tick(session);
+
+        // Check if timer expired (hit 0:0)
+        if (session.timer.minutes === 0 && session.timer.seconds === 0) {
+          session = handleTimerExpired(session);
+        }
+
         registry.set(sessionId, session);
         broadcast(sessionId);
       }
@@ -125,6 +133,14 @@ export function createServer() {
           let current = registry.get(id);
           if (current) {
             current = resetTimer(current);
+            registry.set(id, current);
+            broadcast(id);
+          }
+        }
+        if (message.command === "setTimer") {
+          let current = registry.get(id);
+          if (current) {
+            current = setTimer(current, message.minutes, message.seconds);
             registry.set(id, current);
             broadcast(id);
           }
