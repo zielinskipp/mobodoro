@@ -92,4 +92,66 @@ describe("Server integration", () => {
 
     ws.close();
   });
+
+  it("should handle pause command", async () => {
+    const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
+    const { sessionId } = await response.json();
+
+    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+
+    // Wait for initial message
+    await new Promise<void>((resolve) => {
+      ws.once("message", () => resolve());
+    });
+
+    // Send pause command
+    ws.send(JSON.stringify({ command: "pause" }));
+
+    // Should receive updated state with timer paused
+    const updated = await new Promise<any>((resolve, reject) => {
+      ws.once("message", (data) => resolve(JSON.parse(data.toString())));
+      setTimeout(() => reject(new Error("timeout")), 1000);
+    });
+
+    expect(updated.timer.isRunning).toBe(false);
+
+    ws.close();
+  });
+
+  it("should handle reset command", async () => {
+    const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
+    const { sessionId } = await response.json();
+
+    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+
+    // Wait for initial message
+    await new Promise<void>((resolve) => {
+      ws.once("message", () => resolve());
+    });
+
+    // Start the timer
+    ws.send(JSON.stringify({ command: "start" }));
+
+    // Wait for start confirmation
+    const started = await new Promise<any>((resolve) => {
+      ws.once("message", (data) => resolve(JSON.parse(data.toString())));
+    });
+
+    expect(started.timer.isRunning).toBe(true);
+
+    // Now send reset command
+    ws.send(JSON.stringify({ command: "reset" }));
+
+    // Should receive updated state with timer reset to defaults
+    const updated = await new Promise<any>((resolve, reject) => {
+      ws.once("message", (data) => resolve(JSON.parse(data.toString())));
+      setTimeout(() => reject(new Error("timeout")), 1000);
+    });
+
+    expect(updated.timer.minutes).toBe(25);
+    expect(updated.timer.seconds).toBe(0);
+    expect(updated.timer.isRunning).toBe(false);
+
+    ws.close();
+  });
 });

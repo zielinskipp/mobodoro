@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import websocket from "@fastify/websocket";
 import { createRegistry } from "./registry";
-import { makeSession, startTimer } from "./session";
+import { makeSession, startTimer, pauseTimer, resetTimer } from "./session";
 
 export function createServer() {
   const fastify = Fastify({
@@ -39,6 +39,22 @@ export function createServer() {
           let current = registry.get(id);
           if (current) {
             current = startTimer(current);
+            registry.set(id, current);
+            socket.send(JSON.stringify(current));
+          }
+        }
+        if (message.command === "pause") {
+          let current = registry.get(id);
+          if (current) {
+            current = pauseTimer(current);
+            registry.set(id, current);
+            socket.send(JSON.stringify(current));
+          }
+        }
+        if (message.command === "reset") {
+          let current = registry.get(id);
+          if (current) {
+            current = resetTimer(current);
             registry.set(id, current);
             socket.send(JSON.stringify(current));
           }
