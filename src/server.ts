@@ -120,7 +120,7 @@ export function createServer() {
         }
       });
 
-      socket.on("message", (raw) => {
+      socket.on("message", (raw: Buffer) => {
         const message = JSON.parse(raw.toString());
 
         if (message.command === "start") {
