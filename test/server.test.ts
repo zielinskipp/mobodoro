@@ -154,4 +154,41 @@ describe("Server integration", () => {
 
     ws.close();
   });
+
+  it("should tick running timer every second and broadcast updates", async () => {
+    const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
+    const { sessionId } = await response.json();
+
+    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+
+    // Wait for initial message
+    await new Promise<void>((resolve) => {
+      ws.once("message", () => resolve());
+    });
+
+    // Start the timer
+    ws.send(JSON.stringify({ command: "start" }));
+
+    // Wait for start confirmation
+    const started = await new Promise<any>((resolve) => {
+      ws.once("message", (data) => resolve(JSON.parse(data.toString())));
+    });
+
+    expect(started.timer.isRunning).toBe(true);
+    expect(started.timer.minutes).toBe(25);
+    expect(started.timer.seconds).toBe(0);
+
+    // Wait for tick update (should happen within ~1 second)
+    const ticked = await new Promise<any>((resolve, reject) => {
+      ws.once("message", (data) => resolve(JSON.parse(data.toString())));
+      setTimeout(() => reject(new Error("No tick received")), 1500);
+    });
+
+    // Timer should have decremented
+    expect(ticked.timer.minutes).toBe(24);
+    expect(ticked.timer.seconds).toBe(59);
+    expect(ticked.timer.isRunning).toBe(true);
+
+    ws.close();
+  });
 });

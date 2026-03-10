@@ -3,8 +3,15 @@ import websocket from "@fastify/websocket";
 import fastifyStatic from "@fastify/static";
 import path from "path";
 import { fileURLToPath } from "url";
+import type { WebSocket } from "ws";
 import { createRegistry } from "./registry";
-import { makeSession, startTimer, pauseTimer, resetTimer } from "./session";
+import {
+  makeSession,
+  startTimer,
+  pauseTimer,
+  resetTimer,
+  tick,
+} from "./session";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,6 +22,36 @@ export function createServer() {
   });
 
   const registry = createRegistry();
+
+  // Track WebSocket connections per session
+  const connections = new Map<string, Set<WebSocket>>();
+
+  // Broadcast state to all clients in a session
+  function broadcast(sessionId: string) {
+    const session = registry.get(sessionId);
+    const sockets = connections.get(sessionId);
+    if (session && sockets) {
+      const message = JSON.stringify(session);
+      sockets.forEach((socket) => {
+        if (socket.readyState === 1) {
+          // 1 = WebSocket.OPEN
+          socket.send(message);
+        }
+      });
+    }
+  }
+
+  // Tick loop - runs every second
+  setInterval(() => {
+    connections.forEach((_, sessionId) => {
+      let session = registry.get(sessionId);
+      if (session && session.timer.isRunning) {
+        session = tick(session);
+        registry.set(sessionId, session);
+        broadcast(sessionId);
+      }
+    });
+  }, 1000);
 
   // Serve static files from public directory
   fastify.register(fastifyStatic, {
@@ -40,9 +77,30 @@ export function createServer() {
       const { id } = request.params as { id: string };
       const session = registry.get(id);
 
-      if (session) {
-        socket.send(JSON.stringify(session));
+      if (!session) {
+        socket.close();
+        return;
       }
+
+      // Track this connection
+      if (!connections.has(id)) {
+        connections.set(id, new Set());
+      }
+      connections.get(id)!.add(socket);
+
+      // Send initial state
+      socket.send(JSON.stringify(session));
+
+      // Handle client disconnect
+      socket.on("close", () => {
+        const sockets = connections.get(id);
+        if (sockets) {
+          sockets.delete(socket);
+          if (sockets.size === 0) {
+            connections.delete(id);
+          }
+        }
+      });
 
       socket.on("message", (raw) => {
         const message = JSON.parse(raw.toString());
@@ -52,7 +110,7 @@ export function createServer() {
           if (current) {
             current = startTimer(current);
             registry.set(id, current);
-            socket.send(JSON.stringify(current));
+            broadcast(id);
           }
         }
         if (message.command === "pause") {
@@ -60,7 +118,7 @@ export function createServer() {
           if (current) {
             current = pauseTimer(current);
             registry.set(id, current);
-            socket.send(JSON.stringify(current));
+            broadcast(id);
           }
         }
         if (message.command === "reset") {
@@ -68,7 +126,7 @@ export function createServer() {
           if (current) {
             current = resetTimer(current);
             registry.set(id, current);
-            socket.send(JSON.stringify(current));
+            broadcast(id);
           }
         }
       });
