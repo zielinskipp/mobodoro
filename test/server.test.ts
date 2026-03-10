@@ -244,4 +244,101 @@ describe("Server integration", () => {
 
     ws.close();
   });
+
+  it("should handle addMobber command", async () => {
+    const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
+    const { sessionId } = await response.json();
+
+    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+
+    // Wait for initial message
+    await new Promise<void>((resolve) => {
+      ws.once("message", () => resolve());
+    });
+
+    // Add a mobber
+    ws.send(JSON.stringify({ command: "addMobber", name: "Alice" }));
+
+    // Should receive updated state with Alice in mobbers list
+    const updated = await new Promise<any>((resolve, reject) => {
+      ws.once("message", (data) => resolve(JSON.parse(data.toString())));
+      setTimeout(() => reject(new Error("timeout")), 1000);
+    });
+
+    expect(updated.mobbers).toEqual(["Alice"]);
+
+    ws.close();
+  });
+
+  it("should handle removeMobber command", async () => {
+    const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
+    const { sessionId } = await response.json();
+
+    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+
+    // Wait for initial message
+    await new Promise<void>((resolve) => {
+      ws.once("message", () => resolve());
+    });
+
+    // Add two mobbers
+    ws.send(JSON.stringify({ command: "addMobber", name: "Alice" }));
+    await new Promise<void>((resolve) => {
+      ws.once("message", () => resolve());
+    });
+
+    ws.send(JSON.stringify({ command: "addMobber", name: "Bob" }));
+    await new Promise<void>((resolve) => {
+      ws.once("message", () => resolve());
+    });
+
+    // Remove Alice
+    ws.send(JSON.stringify({ command: "removeMobber", name: "Alice" }));
+
+    // Should receive updated state with only Bob
+    const updated = await new Promise<any>((resolve, reject) => {
+      ws.once("message", (data) => resolve(JSON.parse(data.toString())));
+      setTimeout(() => reject(new Error("timeout")), 1000);
+    });
+
+    expect(updated.mobbers).toEqual(["Bob"]);
+
+    ws.close();
+  });
+
+  it("should handle rotateMobber command", async () => {
+    const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
+    const { sessionId } = await response.json();
+
+    const ws = new WebSocket(`${wsUrl}/session/${sessionId}`);
+
+    // Wait for initial message
+    await new Promise<void>((resolve) => {
+      ws.once("message", () => resolve());
+    });
+
+    // Add two mobbers
+    ws.send(JSON.stringify({ command: "addMobber", name: "Alice" }));
+    await new Promise<void>((resolve) => {
+      ws.once("message", () => resolve());
+    });
+
+    ws.send(JSON.stringify({ command: "addMobber", name: "Bob" }));
+    await new Promise<void>((resolve) => {
+      ws.once("message", () => resolve());
+    });
+
+    // Rotate mobber
+    ws.send(JSON.stringify({ command: "rotateMobber" }));
+
+    // Should receive updated state with currentMobberIndex = 1
+    const updated = await new Promise<any>((resolve, reject) => {
+      ws.once("message", (data) => resolve(JSON.parse(data.toString())));
+      setTimeout(() => reject(new Error("timeout")), 1000);
+    });
+
+    expect(updated.currentMobberIndex).toBe(1);
+
+    ws.close();
+  });
 });

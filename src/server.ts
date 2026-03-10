@@ -11,6 +11,9 @@ import {
   pauseTimer,
   resetTimer,
   setTimer,
+  addMobber,
+  removeMobber,
+  rotateMobber,
   tick,
   handleTimerExpired,
 } from "./session";
@@ -141,6 +144,30 @@ export function createServer() {
           let current = registry.get(id);
           if (current) {
             current = setTimer(current, message.minutes, message.seconds);
+            registry.set(id, current);
+            broadcast(id);
+          }
+        }
+        if (message.command === "addMobber") {
+          let current = registry.get(id);
+          if (current) {
+            current = addMobber(current, message.name);
+            registry.set(id, current);
+            broadcast(id);
+          }
+        }
+        if (message.command === "removeMobber") {
+          let current = registry.get(id);
+          if (current) {
+            current = removeMobber(current, message.name);
+            registry.set(id, current);
+            broadcast(id);
+          }
+        }
+        if (message.command === "rotateMobber") {
+          let current = registry.get(id);
+          if (current) {
+            current = rotateMobber(current);
             registry.set(id, current);
             broadcast(id);
           }
