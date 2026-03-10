@@ -4,7 +4,7 @@ import fastifyStatic from "@fastify/static";
 import path from "path";
 import { fileURLToPath } from "url";
 import type { WebSocket } from "ws";
-import { createRegistry } from "./registry";
+import { createRegistry } from "./registry.js";
 import {
   makeSession,
   startTimer,
@@ -18,7 +18,7 @@ import {
   handleTimerExpired,
   configureSession,
   skipPhase,
-} from "./session";
+} from "./session.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

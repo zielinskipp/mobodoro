@@ -7,8 +7,13 @@
   "scripts": {
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "build": "tsc",
-    "dev": "tsx watch src/index.ts"
+    "build": "npm run clean && tsc && npm run copy-static",
+    "clean": "rm -rf dist",
+    "copy-static": "cp -r public dist/",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "package": "npm run build && npm run create-deploy-package",
+    "create-deploy-package": "cp deployment-package.json dist/package.json && cd dist && zip -r ../mobodoro-deploy.zip . && cd .."
   },
   "keywords": [],
   "author": "",
