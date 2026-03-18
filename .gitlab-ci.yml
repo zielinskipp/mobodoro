@@ -27,7 +27,7 @@ deploy:
   stage: deploy
   image: alpine:latest
   before_script:
-    - apk add --no-cache openssh-client rsync
+    - apk add --no-cache openssh-client
     - mkdir -p ~/.ssh
     - cp "$SSH_PRIVATE_KEY" ~/.ssh/id_ed25519
     - sed -i 's/\r//' ~/.ssh/id_ed25519
@@ -36,10 +36,8 @@ deploy:
     - chmod 644 ~/.ssh/known_hosts
   script:
     # Upload built artifacts
-    - rsync -az --delete -e "ssh -p $VPS_PORT"
-      dist/ $VPS_USER@$VPS_HOST:$APP_DIR/dist/
-    - rsync -az -e "ssh -p $VPS_PORT"
-      ecosystem.config.cjs package.json $VPS_USER@$VPS_HOST:$APP_DIR/
+    - scp -P $VPS_PORT -r dist/ $VPS_USER@$VPS_HOST:$APP_DIR/
+    - scp -P $VPS_PORT ecosystem.config.cjs package.json $VPS_USER@$VPS_HOST:$APP_DIR/
     # Install prod deps and restart
     - ssh -p $VPS_PORT $VPS_USER@$VPS_HOST "
       cd $APP_DIR &&
