@@ -29,8 +29,7 @@ deploy:
   before_script:
     - apt-get update -qy && apt-get install -y openssh-client
     - eval $(ssh-agent -s)
-    - chmod 400 $SSH_PRIVATE_KEY
-    - ssh-add $SSH_PRIVATE_KEY
+    - echo "$SSH_PRIVATE_KEY" | base64 -d | ssh-add -
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
     - ssh-keyscan -p $VPS_PORT $VPS_HOST >> ~/.ssh/known_hosts
   script:
