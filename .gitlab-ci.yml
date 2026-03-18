@@ -35,7 +35,7 @@ deploy:
   script:
     # Upload built artifacts
     - scp -P $VPS_PORT -r dist/ $VPS_USER@$VPS_HOST:$APP_DIR/
-    - scp -P $VPS_PORT ecosystem.config.cjs package.json $VPS_USER@$VPS_HOST:$APP_DIR/
+    - scp -P $VPS_PORT ecosystem.config.cjs package.json package-lock.json $VPS_USER@$VPS_HOST:$APP_DIR/
     # Install prod deps and restart
     - ssh -p $VPS_PORT $VPS_USER@$VPS_HOST "
       source ~/.nvm/nvm.sh &&
