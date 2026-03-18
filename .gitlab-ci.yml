@@ -25,14 +25,13 @@ build:
 
 deploy:
   stage: deploy
-  image: alpine:latest
+  image: ubuntu:latest
   before_script:
-    - chmod 400 $SSH_PRIVATE_KEY
+    - apt-get update -qy && apt-get install -y openssh-client
     - eval $(ssh-agent -s)
-    - ssh-add $SSH_PRIVATE_KEY
-
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
     - ssh-keyscan -p $VPS_PORT $VPS_HOST >> ~/.ssh/known_hosts
-    - chmod 644 ~/.ssh/known_hosts
   script:
     # Upload built artifacts
     - scp -P $VPS_PORT -r dist/ $VPS_USER@$VPS_HOST:$APP_DIR/
