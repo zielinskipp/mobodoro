@@ -30,11 +30,10 @@ deploy:
     - apk add --no-cache openssh-client rsync
     - mkdir -p ~/.ssh
     - cp "$SSH_PRIVATE_KEY" ~/.ssh/id_ed25519
+    - sed -i 's/\r//' ~/.ssh/id_ed25519
     - chmod 600 ~/.ssh/id_ed25519
-    - echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+    - printf '%s\n' "$SSH_KNOWN_HOSTS" | tr -d '\r' >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
-    - echo "=== known_hosts content ===" && cat ~/.ssh/known_hosts
-    - ssh -v -p $VPS_PORT -o BatchMode=yes $VPS_USER@$VPS_HOST echo "SSH OK" 2>&1 || true
   script:
     # Upload built artifacts
     - rsync -az --delete -e "ssh -p $VPS_PORT"
