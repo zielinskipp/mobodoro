@@ -27,14 +27,15 @@ deploy:
   stage: deploy
   image: ubuntu:latest
   before_script:
-    - apt-get update -qy && apt-get install -y openssh-client
+    - apt-get update -qy && apt-get install -y openssh-client rsync
     - eval $(ssh-agent -s)
     - printf '%s' "$SSH_PRIVATE_KEY" | base64 -d | ssh-add -
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
     - ssh-keyscan -p $VPS_PORT $VPS_HOST >> ~/.ssh/known_hosts
   script:
     # Upload built artifacts
-    - scp -P $VPS_PORT -r dist/ $VPS_USER@$VPS_HOST:$APP_DIR/
+    - rsync -az --delete -e "ssh -p $VPS_PORT" dist/ $VPS_USER@$VPS_HOST:$APP_DIR/dist/
+    - rsync -az --delete -e "ssh -p $VPS_PORT" public/ $VPS_USER@$VPS_HOST:$APP_DIR/public/
     - scp -P $VPS_PORT ecosystem.config.cjs package.json package-lock.json $VPS_USER@$VPS_HOST:$APP_DIR/
     # Install prod deps and restart
     - ssh -p $VPS_PORT $VPS_USER@$VPS_HOST "

@@ -7,7 +7,7 @@
   "scripts": {
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "build": "npm run clean && tsc && npm run copy-static",
+    "build": "npm run clean && tsc",
     "clean": "rm -rf dist",
     "copy-static": "cp -r public dist/",
     "dev": "tsx watch src/index.ts",
