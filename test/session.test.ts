@@ -275,6 +275,22 @@ describe("Phase transitions", () => {
     expect(backToWork.timer.isRunning).toBe(false);
   });
 
+  it("should rotate to next mobber when break expires and work resumes", () => {
+    const session = makeSession();
+    const withMobbers = addMobber(addMobber(session, "Alice"), "Bob");
+    const onBreak = {
+      ...withMobbers,
+      phase: "shortBreak" as const,
+      currentMobberIndex: 0,
+      timer: { minutes: 0, seconds: 0, isRunning: false },
+    };
+
+    const backToWork = handleTimerExpired(onBreak);
+
+    expect(backToWork.phase).toBe("work");
+    expect(backToWork.currentMobberIndex).toBe(1);
+  });
+
   it("should skip phase and transition immediately", () => {
     const session = makeSession();
     const withMobbers = addMobber(addMobber(session, "Alice"), "Bob");

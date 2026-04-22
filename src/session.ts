@@ -202,10 +202,12 @@ export function handleTimerExpired(session: SessionState): SessionState {
     };
   }
 
-  // Handle break phase expiration - return to work
+  // Handle break phase expiration - return to work and rotate to next driver
   if (session.phase === "shortBreak") {
+    const rotated =
+      session.mobbers.length > 0 ? rotateMobber(session) : session;
     return {
-      ...session,
+      ...rotated,
       phase: "work",
       timer: { ...session.duration, isRunning: false },
     };

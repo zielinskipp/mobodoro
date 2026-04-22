@@ -48,6 +48,17 @@ export function createServer() {
     }
   }
 
+  // Keepalive pings every 30 seconds to prevent proxy/idle disconnect
+  setInterval(() => {
+    connections.forEach((sockets) => {
+      sockets.forEach((socket) => {
+        if (socket.readyState === 1) {
+          socket.ping();
+        }
+      });
+    });
+  }, 30_000);
+
   // Tick loop - runs every second
   setInterval(() => {
     connections.forEach((_, sessionId) => {
