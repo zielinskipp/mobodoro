@@ -206,7 +206,7 @@ function openRenameInline(el, name) {
   input.addEventListener("blur", () => input.remove());
 }
 
-function openContextMenu(el, name) {
+function openContextMenu(el, name, color) {
   if (activeMenu && activeMenu.name === name) {
     closeMenu();
     return;
@@ -220,6 +220,7 @@ function openContextMenu(el, name) {
 
   menu.innerHTML = `
     <div class="menu-item" data-action="rename">✏ Rename</div>
+    <div class="menu-item" data-action="color">🎨 Color</div>
     <div class="menu-item" data-action="remove">🗑 Remove</div>
   `;
 
@@ -228,6 +229,9 @@ function openContextMenu(el, name) {
     if (action === "rename") {
       closeMenu();
       openRenameInline(el, name);
+    } else if (action === "color") {
+      closeMenu();
+      openColorPicker(name, color);
     } else if (action === "remove") {
       closeMenu();
       sendCommand({ command: "removeMobber", name });
@@ -236,6 +240,21 @@ function openContextMenu(el, name) {
 
   document.body.appendChild(menu);
   activeMenu = { name, el: menu };
+}
+
+// ── Colour picker ─────────────────────────────────────────────────────────────
+function openColorPicker(name, currentColor) {
+  const input = document.createElement("input");
+  input.type = "color";
+  input.value = currentColor;
+  input.style.cssText =
+    "position:fixed; opacity:0; width:0; height:0; top:0; left:0;";
+  document.body.appendChild(input);
+  input.click();
+  input.addEventListener("change", () => {
+    sendCommand({ command: "recolorMobber", name, color: input.value });
+  });
+  input.addEventListener("blur", () => input.remove());
 }
 
 // ── Add-mobber inline form ────────────────────────────────────────────────────
@@ -446,7 +465,7 @@ function renderPlanets(s) {
     activePlanet.title = activeMobber.name;
     activePlanet.addEventListener("click", (e) => {
       e.stopPropagation();
-      openContextMenu(activePlanet, activeMobber.name);
+      openContextMenu(activePlanet, activeMobber.name, activeMobber.color);
     });
     orbitArea.appendChild(activePlanet);
 
@@ -462,7 +481,7 @@ function renderPlanets(s) {
       el.title = mobber.name;
       el.addEventListener("click", (e) => {
         e.stopPropagation();
-        openContextMenu(el, mobber.name);
+        openContextMenu(el, mobber.name, mobber.color);
       });
       orbitArea.appendChild(el);
     }

@@ -204,6 +204,19 @@ export function renameMobber(
   };
 }
 
+export function recolorMobber(
+  session: SessionState,
+  name: string,
+  color: string,
+): SessionState {
+  return {
+    ...session,
+    mobbers: session.mobbers.map((m) =>
+      m.name === name ? { ...m, color } : m,
+    ),
+  };
+}
+
 export function removeMobber(
   session: SessionState,
   name: string,

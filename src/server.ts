@@ -19,6 +19,7 @@ import {
   configureSession,
   skipPhase,
   renameMobber,
+  recolorMobber,
 } from "./session.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -221,6 +222,17 @@ export function createServer() {
             registry.set(id, current);
             fastify.log.info({ sessionId: id, oldName: message.oldName, newName: message.newName }, "mobber renamed");
             broadcast(id);
+          }
+        }
+        if (message.command === "recolorMobber") {
+          const color: string = message.color ?? "";
+          if (/^#[0-9a-fA-F]{6}$/.test(color)) {
+            let current = registry.get(id);
+            if (current) {
+              current = recolorMobber(current, message.name, color);
+              registry.set(id, current);
+              broadcast(id);
+            }
           }
         }
         if (message.command === "skip") {

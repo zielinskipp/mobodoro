@@ -9,6 +9,7 @@ import {
   addMobber,
   removeMobber,
   renameMobber,
+  recolorMobber,
   rotateMobber,
   handleTimerExpired,
   configureSession,
@@ -431,7 +432,7 @@ describe("Long break", () => {
       ...makeSession(),
       phase: "shortBreak",
       timer: { minutes: 0, seconds: 0, isRunning: false },
-      shortBreakCount: 2,         // even if count is high
+      shortBreakCount: 2, // even if count is high
       shortBreaksBeforeLongBreak: 3,
     };
 
@@ -466,7 +467,7 @@ describe("Long break", () => {
       timer: { minutes: 0, seconds: 0, isRunning: false },
       rotationsBeforeBreak: 1,
       rotationCount: 0,
-      shortBreakCount: 2,                           // 2 + 1 = 3 >= 3
+      shortBreakCount: 2, // 2 + 1 = 3 >= 3
       shortBreaksBeforeLongBreak: 3,
       longBreakDuration: { minutes: 15, seconds: 0 },
     };
@@ -565,6 +566,41 @@ describe("renameMobber", () => {
     const session = addMobber(makeSession(), "Alice");
 
     const result = renameMobber(session, "Nobody", "NewName");
+
+    expect(result.mobbers).toEqual(session.mobbers);
+  });
+});
+
+describe("recolorMobber", () => {
+  it("should update the colour of the matching mobber", () => {
+    const session = addMobber(makeSession(), "Alice");
+
+    const recolored = recolorMobber(session, "Alice", "#ff0000");
+
+    expect(recolored.mobbers[0].color).toBe("#ff0000");
+  });
+
+  it("should preserve the mobber's name when recoloring", () => {
+    const session = addMobber(makeSession(), "Alice");
+
+    const recolored = recolorMobber(session, "Alice", "#ff0000");
+
+    expect(recolored.mobbers[0].name).toBe("Alice");
+  });
+
+  it("should leave other mobbers unchanged", () => {
+    const session = addMobber(addMobber(makeSession(), "Alice"), "Bob");
+    const bobColor = session.mobbers[1].color;
+
+    const recolored = recolorMobber(session, "Alice", "#aabbcc");
+
+    expect(recolored.mobbers[1].color).toBe(bobColor);
+  });
+
+  it("should do nothing if the name is not found", () => {
+    const session = addMobber(makeSession(), "Alice");
+
+    const result = recolorMobber(session, "Nobody", "#123456");
 
     expect(result.mobbers).toEqual(session.mobbers);
   });
