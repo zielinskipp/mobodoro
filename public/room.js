@@ -37,16 +37,29 @@ const breakMinutesInput = document.getElementById("breakMinutes");
 const rotationsBeforeBreakInput = document.getElementById(
   "rotationsBeforeBreak",
 );
+const longBreakMinutesInput = document.getElementById("longBreakMinutes");
+const shortBreaksBeforeLongBreakInput = document.getElementById(
+  "shortBreaksBeforeLongBreak",
+);
 const workMinutesVal = document.getElementById("workMinutesVal");
 const breakMinutesVal = document.getElementById("breakMinutesVal");
 const rotationsBeforeBreakVal = document.getElementById(
   "rotationsBeforeBreakVal",
 );
+const longBreakMinutesVal = document.getElementById("longBreakMinutesVal");
+const shortBreaksBeforeLongBreakVal = document.getElementById(
+  "shortBreaksBeforeLongBreakVal",
+);
 
 // ── Geometry ────────────────────────────────────────────────────────────────────────────
 // progress 0 = 3 o'clock (right), travels clockwise
 function travelingAngle(s) {
-  const durSrc = s.phase === "work" ? s.duration : s.breakDuration;
+  const durSrc =
+    s.phase === "work"
+      ? s.duration
+      : s.phase === "longBreak"
+        ? s.longBreakDuration
+        : s.breakDuration;
   const totalSecs = durSrc.minutes * 60 + durSrc.seconds;
   const remainingSecs = s.timer.minutes * 60 + s.timer.seconds;
   const elapsed = totalSecs - remainingSecs;
@@ -446,9 +459,13 @@ function updateUI(s) {
   workMinutesInput.value = s.duration.minutes;
   breakMinutesInput.value = s.breakDuration.minutes;
   rotationsBeforeBreakInput.value = s.rotationsBeforeBreak;
+  longBreakMinutesInput.value = s.longBreakDuration.minutes;
+  shortBreaksBeforeLongBreakInput.value = s.shortBreaksBeforeLongBreak;
   workMinutesVal.textContent = s.duration.minutes;
   breakMinutesVal.textContent = s.breakDuration.minutes;
   rotationsBeforeBreakVal.textContent = s.rotationsBeforeBreak;
+  longBreakMinutesVal.textContent = s.longBreakDuration.minutes;
+  shortBreaksBeforeLongBreakVal.textContent = s.shortBreaksBeforeLongBreak;
 
   // Colours
   const activeColor = s.mobbers[s.currentMobberIndex]?.color ?? "#667eea";
@@ -506,6 +523,9 @@ configureBtn.addEventListener("click", () => {
     workMinutes: parseInt(workMinutesInput.value) || 25,
     breakMinutes: parseInt(breakMinutesInput.value) || 5,
     rotationsBeforeBreak: parseInt(rotationsBeforeBreakInput.value) || 1,
+    longBreakMinutes: parseInt(longBreakMinutesInput.value) || 15,
+    shortBreaksBeforeLongBreak:
+      parseInt(shortBreaksBeforeLongBreakInput.value) || 3,
   });
 });
 
@@ -526,6 +546,13 @@ breakMinutesInput.addEventListener("input", () => {
 });
 rotationsBeforeBreakInput.addEventListener("input", () => {
   rotationsBeforeBreakVal.textContent = rotationsBeforeBreakInput.value;
+});
+longBreakMinutesInput.addEventListener("input", () => {
+  longBreakMinutesVal.textContent = longBreakMinutesInput.value;
+});
+shortBreaksBeforeLongBreakInput.addEventListener("input", () => {
+  shortBreaksBeforeLongBreakVal.textContent =
+    shortBreaksBeforeLongBreakInput.value;
 });
 
 // Close menus and settings panel on backdrop click

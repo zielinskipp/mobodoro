@@ -486,10 +486,10 @@
       </div>
       <div class="setting-item">
         <div class="setting-header">
-          <span class="setting-label">Long break after</span>
+          <span class="setting-label">Rounds before break</span>
           <span class="setting-value-display">
             <span id="rotationsBeforeBreakVal">1</span
-            ><span class="setting-unit"> rotation</span>
+            ><span class="setting-unit"> round</span>
           </span>
         </div>
         <input
@@ -498,6 +498,32 @@
           min="1"
           max="10"
           value="1"
+        />
+      </div>
+      <div class="setting-item">
+        <div class="setting-header">
+          <span class="setting-label">Long break</span>
+          <span class="setting-value-display">
+            <span id="longBreakMinutesVal">15</span
+            ><span class="setting-unit"> min</span>
+          </span>
+        </div>
+        <input type="range" id="longBreakMinutes" min="5" max="60" value="15" />
+      </div>
+      <div class="setting-item">
+        <div class="setting-header">
+          <span class="setting-label">Long break after</span>
+          <span class="setting-value-display">
+            <span id="shortBreaksBeforeLongBreakVal">3</span
+            ><span class="setting-unit"> breaks</span>
+          </span>
+        </div>
+        <input
+          type="range"
+          id="shortBreaksBeforeLongBreak"
+          min="1"
+          max="10"
+          value="3"
         />
       </div>
       <button id="configureBtn" class="settings-apply">Apply ✓</button>
