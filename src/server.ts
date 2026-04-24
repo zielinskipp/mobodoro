@@ -18,6 +18,7 @@ import {
   handleTimerExpired,
   configureSession,
   skipPhase,
+  renameMobber,
 } from "./session.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -198,6 +199,14 @@ export function createServer() {
           let current = registry.get(id);
           if (current) {
             current = rotateMobber(current);
+            registry.set(id, current);
+            broadcast(id);
+          }
+        }
+        if (message.command === "renameMobber") {
+          let current = registry.get(id);
+          if (current) {
+            current = renameMobber(current, message.oldName, message.newName);
             registry.set(id, current);
             broadcast(id);
           }

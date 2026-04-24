@@ -415,4 +415,32 @@ describe("Server integration", () => {
 
     ws.close();
   });
+
+  it("should handle renameMobber command", async () => {
+    const response = await fetch(`${baseUrl}/sessions`, { method: "POST" });
+    const { sessionId } = await response.json();
+
+    const ws = new WebSocket(`${wsUrl}/ws/${sessionId}`);
+
+    await new Promise<void>((resolve) => {
+      ws.once("message", () => resolve());
+    });
+
+    ws.send(JSON.stringify({ command: "addMobber", name: "Alice" }));
+    await new Promise<void>((resolve) => {
+      ws.once("message", () => resolve());
+    });
+
+    ws.send(JSON.stringify({ command: "renameMobber", oldName: "Alice", newName: "Alicia" }));
+
+    const updated = await new Promise<any>((resolve, reject) => {
+      ws.once("message", (data) => resolve(JSON.parse(data.toString())));
+      setTimeout(() => reject(new Error("timeout")), 1000);
+    });
+
+    expect(updated.mobbers[0].name).toBe("Alicia");
+    expect(updated.mobbers[0].color).toBe("#e74c3c");
+
+    ws.close();
+  });
 });

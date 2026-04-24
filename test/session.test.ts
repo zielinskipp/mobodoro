@@ -8,6 +8,7 @@ import {
   setTimer,
   addMobber,
   removeMobber,
+  renameMobber,
   rotateMobber,
   handleTimerExpired,
   configureSession,
@@ -375,5 +376,33 @@ describe("Mobber colours", () => {
     expect(withCharlie.mobbers.find((m) => m.name === "Charlie")?.color).toBe(
       "#3498db",
     );
+  });
+});
+
+describe("renameMobber", () => {
+  it("should rename the matching mobber and preserve their colour", () => {
+    const session = addMobber(addMobber(makeSession(), "Alice"), "Bob");
+    const aliceColor = session.mobbers[0].color;
+
+    const renamed = renameMobber(session, "Alice", "Alicia");
+
+    expect(renamed.mobbers[0].name).toBe("Alicia");
+    expect(renamed.mobbers[0].color).toBe(aliceColor);
+  });
+
+  it("should leave other mobbers unchanged", () => {
+    const session = addMobber(addMobber(makeSession(), "Alice"), "Bob");
+
+    const renamed = renameMobber(session, "Alice", "Alicia");
+
+    expect(renamed.mobbers[1].name).toBe("Bob");
+  });
+
+  it("should do nothing if the name is not found", () => {
+    const session = addMobber(makeSession(), "Alice");
+
+    const result = renameMobber(session, "Nobody", "NewName");
+
+    expect(result.mobbers).toEqual(session.mobbers);
   });
 });

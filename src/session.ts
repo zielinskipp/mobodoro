@@ -168,6 +168,19 @@ export function addMobber(session: SessionState, name: string): SessionState {
   };
 }
 
+export function renameMobber(
+  session: SessionState,
+  oldName: string,
+  newName: string,
+): SessionState {
+  return {
+    ...session,
+    mobbers: session.mobbers.map((m) =>
+      m.name === oldName ? { ...m, name: newName } : m,
+    ),
+  };
+}
+
 export function removeMobber(
   session: SessionState,
   name: string,
