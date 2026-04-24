@@ -14,6 +14,9 @@ const PHASE_COLORS = {
 let ws = null;
 let session = null;
 let activeMenu = null;
+let pomodoroHistory = []; // [{color}] – completed work orbits, this browser session
+let prevDriverKey = null; // `${rotationCount}:${currentMobberIndex}`
+const MAX_HISTORY = 8;
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 const orbitArea = document.getElementById("orbitArea");
@@ -217,108 +220,149 @@ function makeSVGEl(tag, attrs) {
 
 // ── Per-user orbit rings + progress arc + dot ────────────────────────────────
 const BASE_R = 100;
-const RING_SPACING = 28;
 const PLANET_SIZE = 26;
+const HIST_SP = 4;   // history rings are just coloured bands — no gap needed
+const QUEUE_SP = 30; // queue rings need clearance for 26 px planet divs
+
+// Records a completed work orbit when the active driver changes
+function recordCompletedOrbit(s) {
+  if (!s.mobbers.length) return;
+  const key = `${s.rotationCount}:${s.currentMobberIndex}`;
+  if (prevDriverKey !== null && prevDriverKey !== key && s.phase === "work") {
+    const prevIdx = parseInt(prevDriverKey.split(":")[1]);
+    const m = s.mobbers[prevIdx];
+    if (m) pomodoroHistory.push({ color: m.color });
+  }
+  prevDriverKey = key;
+}
 
 function renderRings(s) {
   orbitSvg.innerHTML = "";
   const n = s.mobbers.length;
+  const H = Math.min(pomodoroHistory.length, MAX_HISTORY);
 
   if (n === 0) {
     orbitSvg.appendChild(
       makeSVGEl("circle", {
-        cx: 200,
-        cy: 200,
-        r: BASE_R,
-        fill: "none",
-        stroke: "rgba(255,255,255,0.15)",
-        "stroke-width": 2,
-        "stroke-dasharray": "7 5",
+        cx: 200, cy: 200, r: BASE_R,
+        fill: "none", stroke: "rgba(255,255,255,0.15)",
+        "stroke-width": 2, "stroke-dasharray": "7 5",
       }),
     );
     return;
   }
 
   const rawAngle = travelingAngle(s);
-  const progress = rawAngle / (2 * Math.PI); // 0..1
+  const progress = rawAngle / (2 * Math.PI);
+  const breakEvery = (s.rotationsBeforeBreak || 1) * n;
 
-  s.mobbers.forEach((mobber, i) => {
-    const r = BASE_R + i * RING_SPACING;
-    const circ = 2 * Math.PI * r;
-    const active = i === s.currentMobberIndex;
-
-    // Dashed background ring
+  // History bands — solid rings, tightly stacked, no break markers here
+  pomodoroHistory.slice(-H).forEach((h, i) => {
+    const r = BASE_R + i * HIST_SP;
     orbitSvg.appendChild(
       makeSVGEl("circle", {
-        cx: 200,
-        cy: 200,
-        r,
-        fill: "none",
-        stroke: mobber.color,
-        "stroke-width": active ? 2.5 : 1.5,
-        "stroke-opacity": active ? 0.5 : 0.22,
-        "stroke-dasharray": "6 5",
+        cx: 200, cy: 200, r, fill: "none",
+        stroke: h.color, "stroke-width": 4, "stroke-opacity": 0.6,
       }),
     );
+  });
 
-    // Progress arc on active ring — rotate(-90) so 0% starts at 12 o'clock
-    if (active && progress > 0) {
+  // Active ring
+  const activeR = BASE_R + H * HIST_SP;
+  const activeColor = s.mobbers[s.currentMobberIndex]?.color ?? "#888";
+  const circ = 2 * Math.PI * activeR;
+  orbitSvg.appendChild(
+    makeSVGEl("circle", {
+      cx: 200, cy: 200, r: activeR, fill: "none",
+      stroke: activeColor, "stroke-width": 2.5,
+      "stroke-opacity": 0.45, "stroke-dasharray": "6 5",
+    }),
+  );
+
+  // Progress arc — rotate(-90) makes 0% start at 12 o'clock
+  if (progress > 0) {
+    orbitSvg.appendChild(
+      makeSVGEl("circle", {
+        cx: 200, cy: 200, r: activeR, fill: "none",
+        stroke: activeColor, "stroke-width": 4,
+        "stroke-linecap": "round",
+        "stroke-dasharray": `${progress * circ} ${circ}`,
+        transform: "rotate(-90, 200, 200)",
+      }),
+    );
+  }
+
+  // Queue ghost rings + white dot where a break will occur
+  // totalPos = absolute session count so we know where the next break falls
+  const totalPos = s.rotationCount * n + s.currentMobberIndex;
+  for (let qi = 1; qi < n; qi++) {
+    const mobberIdx = (s.currentMobberIndex + qi) % n;
+    const r = activeR + qi * QUEUE_SP;
+    orbitSvg.appendChild(
+      makeSVGEl("circle", {
+        cx: 200, cy: 200, r, fill: "none",
+        stroke: s.mobbers[mobberIdx].color,
+        "stroke-width": 1.5, "stroke-opacity": 0.2, "stroke-dasharray": "6 5",
+      }),
+    );
+    // Small white dot at 12 o'clock when a break follows this person's turn
+    if (breakEvery > 0 && (totalPos + qi) % breakEvery === 0) {
       orbitSvg.appendChild(
-        makeSVGEl("circle", {
-          cx: 200,
-          cy: 200,
-          r,
-          fill: "none",
-          stroke: mobber.color,
-          "stroke-width": 4,
-          "stroke-linecap": "round",
-          "stroke-dasharray": `${progress * circ} ${circ}`,
-          "stroke-dashoffset": 0,
-          transform: "rotate(-90, 200, 200)",
-        }),
+        makeSVGEl("circle", { cx: 200, cy: 200 - r, r: 4, fill: "rgba(255,255,255,0.7)" }),
       );
     }
-  });
+  }
 }
 
-// ── Planet divs — active travels, inactive park at 12 o'clock ────────────────
+// ── Planet divs — all start at 12 o'clock, active travels clockwise ──────────
 function renderPlanets(s) {
-  orbitArea
-    .querySelectorAll(".planet, .add-planet")
-    .forEach((el) => el.remove());
+  orbitArea.querySelectorAll(".planet, .add-planet").forEach((el) => el.remove());
   const n = s.mobbers.length;
-  // travelingAngle gives 0 at start; subtract π/2 so 0 = 12 o'clock
-  const activeAngle = travelingAngle(s) - Math.PI / 2;
-  const parkedAngle = -Math.PI / 2; // 12 o'clock
+  const H = Math.min(pomodoroHistory.length, MAX_HISTORY);
   const S = PLANET_SIZE;
+  // subtract π/2 so angle=0 ≡ 12 o'clock (top), grows clockwise
+  const angle = travelingAngle(s) - Math.PI / 2;
 
-  s.mobbers.forEach((mobber, i) => {
-    const r = BASE_R + i * RING_SPACING;
-    const active = i === s.currentMobberIndex;
-    const angle = active ? activeAngle : parkedAngle;
-    const cx = 200 + r * Math.cos(angle);
-    const cy = 200 + r * Math.sin(angle);
-
-    const el = document.createElement("div");
-    el.className = "planet" + (active ? " active" : "");
-    el.style.cssText = `--mobber-color:${mobber.color}; left:${cx - S / 2}px; top:${cy - S / 2}px;`;
-    el.textContent = initials(mobber.name);
-    el.title = mobber.name;
-    el.addEventListener("click", (e) => {
+  if (n > 0) {
+    // Active planet travels on its ring
+    const activeR = BASE_R + H * HIST_SP;
+    const activeMobber = s.mobbers[s.currentMobberIndex];
+    const ax = 200 + activeR * Math.cos(angle);
+    const ay = 200 + activeR * Math.sin(angle);
+    const activePlanet = document.createElement("div");
+    activePlanet.className = "planet active";
+    activePlanet.style.cssText = `--mobber-color:${activeMobber.color}; left:${ax - S / 2}px; top:${ay - S / 2}px;`;
+    activePlanet.textContent = initials(activeMobber.name);
+    activePlanet.title = activeMobber.name;
+    activePlanet.addEventListener("click", (e) => {
       e.stopPropagation();
-      openContextMenu(el, mobber.name);
+      openContextMenu(activePlanet, activeMobber.name);
     });
-    orbitArea.appendChild(el);
-  });
+    orbitArea.appendChild(activePlanet);
 
-  // Faded '+' on the next ring out, at 12 o'clock
-  const lastR = BASE_R + Math.max(n - 1, 0) * RING_SPACING;
-  const addR = lastR + RING_SPACING;
-  const addX = 200 + addR * Math.cos(parkedAngle);
-  const addY = 200 + addR * Math.sin(parkedAngle);
+    // Inactive queue planets park at 12 o'clock (top) on their upcoming rings
+    for (let qi = 1; qi < n; qi++) {
+      const mobberIdx = (s.currentMobberIndex + qi) % n;
+      const mobber = s.mobbers[mobberIdx];
+      const r = activeR + qi * QUEUE_SP;
+      const el = document.createElement("div");
+      el.className = "planet";
+      el.style.cssText = `--mobber-color:${mobber.color}; left:${200 - S / 2}px; top:${200 - r - S / 2}px;`;
+      el.textContent = initials(mobber.name);
+      el.title = mobber.name;
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openContextMenu(el, mobber.name);
+      });
+      orbitArea.appendChild(el);
+    }
+  }
+
+  // Faded '+' at 12 o'clock on the ring just beyond the last queue member
+  const addR = (BASE_R + H * HIST_SP) + n * QUEUE_SP;
   const addBtn = document.createElement("div");
   addBtn.className = "add-planet";
-  addBtn.style.cssText = `left:${addX - S / 2}px; top:${addY - S / 2}px;`;
+  addBtn.style.cssText = `left:${200 - S / 2}px; top:${200 - addR - S / 2}px;`;
   addBtn.textContent = "+";
   addBtn.title = "Add mobber";
   addBtn.addEventListener("click", (e) => {
@@ -360,6 +404,7 @@ function updateUI(s) {
   const activeColor = s.mobbers[s.currentMobberIndex]?.color ?? "#667eea";
   applyPhaseColors(s.phase, activeColor, s.timer.isRunning);
 
+  recordCompletedOrbit(s);
   renderRings(s);
   renderPlanets(s);
 }
