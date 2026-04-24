@@ -111,7 +111,7 @@ describe("Timer controls", () => {
     expect(paused.timer.isRunning).toBe(false);
   });
 
-  it("should reset the timer to initial state", () => {
+  it("should reset the timer to configured work duration", () => {
     const session = makeSession();
     const modified = {
       ...session,
@@ -121,6 +121,43 @@ describe("Timer controls", () => {
     const reset = resetTimer(modified);
 
     expect(reset.timer.minutes).toBe(25);
+    expect(reset.timer.seconds).toBe(0);
+    expect(reset.timer.isRunning).toBe(false);
+  });
+
+  it("should reset to custom work duration when configured", () => {
+    const session = configureSession(makeSession(), {
+      workMinutes: 45,
+      breakMinutes: 5,
+      rotationsBeforeBreak: 1,
+    });
+    const running = {
+      ...session,
+      timer: { minutes: 10, seconds: 0, isRunning: true },
+    };
+
+    const reset = resetTimer(running);
+
+    expect(reset.timer.minutes).toBe(45);
+    expect(reset.timer.seconds).toBe(0);
+    expect(reset.timer.isRunning).toBe(false);
+  });
+
+  it("should reset to break duration when in break phase", () => {
+    const session = configureSession(makeSession(), {
+      workMinutes: 25,
+      breakMinutes: 10,
+      rotationsBeforeBreak: 1,
+    });
+    const onBreak = {
+      ...session,
+      phase: "shortBreak" as const,
+      timer: { minutes: 2, seconds: 0, isRunning: true },
+    };
+
+    const reset = resetTimer(onBreak);
+
+    expect(reset.timer.minutes).toBe(10);
     expect(reset.timer.seconds).toBe(0);
     expect(reset.timer.isRunning).toBe(false);
   });

@@ -133,11 +133,13 @@ export function pauseTimer(session: SessionState): SessionState {
 }
 
 export function resetTimer(session: SessionState): SessionState {
+  const dur =
+    session.phase === "work" ? session.duration : session.breakDuration;
   return {
     ...session,
     timer: {
-      minutes: 25,
-      seconds: 0,
+      minutes: dur.minutes,
+      seconds: dur.seconds,
       isRunning: false,
     },
   };
