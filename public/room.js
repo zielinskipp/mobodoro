@@ -221,7 +221,7 @@ function makeSVGEl(tag, attrs) {
 // ── Per-user orbit rings + progress arc + dot ────────────────────────────────
 const BASE_R = 100;
 const PLANET_SIZE = 26;
-const HIST_SP = 4;   // history rings are just coloured bands — no gap needed
+const HIST_SP = 4; // history rings are just coloured bands — no gap needed
 const QUEUE_SP = 30; // queue rings need clearance for 26 px planet divs
 
 // Records a completed work orbit when the active driver changes
@@ -244,9 +244,13 @@ function renderRings(s) {
   if (n === 0) {
     orbitSvg.appendChild(
       makeSVGEl("circle", {
-        cx: 200, cy: 200, r: BASE_R,
-        fill: "none", stroke: "rgba(255,255,255,0.15)",
-        "stroke-width": 2, "stroke-dasharray": "7 5",
+        cx: 200,
+        cy: 200,
+        r: BASE_R,
+        fill: "none",
+        stroke: "rgba(255,255,255,0.15)",
+        "stroke-width": 2,
+        "stroke-dasharray": "7 5",
       }),
     );
     return;
@@ -261,8 +265,13 @@ function renderRings(s) {
     const r = BASE_R + i * HIST_SP;
     orbitSvg.appendChild(
       makeSVGEl("circle", {
-        cx: 200, cy: 200, r, fill: "none",
-        stroke: h.color, "stroke-width": 4, "stroke-opacity": 0.6,
+        cx: 200,
+        cy: 200,
+        r,
+        fill: "none",
+        stroke: h.color,
+        "stroke-width": 4,
+        "stroke-opacity": 0.6,
       }),
     );
   });
@@ -273,9 +282,14 @@ function renderRings(s) {
   const circ = 2 * Math.PI * activeR;
   orbitSvg.appendChild(
     makeSVGEl("circle", {
-      cx: 200, cy: 200, r: activeR, fill: "none",
-      stroke: activeColor, "stroke-width": 2.5,
-      "stroke-opacity": 0.45, "stroke-dasharray": "6 5",
+      cx: 200,
+      cy: 200,
+      r: activeR,
+      fill: "none",
+      stroke: activeColor,
+      "stroke-width": 2.5,
+      "stroke-opacity": 0.45,
+      "stroke-dasharray": "6 5",
     }),
   );
 
@@ -283,8 +297,12 @@ function renderRings(s) {
   if (progress > 0) {
     orbitSvg.appendChild(
       makeSVGEl("circle", {
-        cx: 200, cy: 200, r: activeR, fill: "none",
-        stroke: activeColor, "stroke-width": 4,
+        cx: 200,
+        cy: 200,
+        r: activeR,
+        fill: "none",
+        stroke: activeColor,
+        "stroke-width": 4,
         "stroke-linecap": "round",
         "stroke-dasharray": `${progress * circ} ${circ}`,
         transform: "rotate(-90, 200, 200)",
@@ -298,17 +316,47 @@ function renderRings(s) {
   for (let qi = 1; qi < n; qi++) {
     const mobberIdx = (s.currentMobberIndex + qi) % n;
     const r = activeR + qi * QUEUE_SP;
+    const qColor = s.mobbers[mobberIdx].color;
+    const qCirc = 2 * Math.PI * r;
     orbitSvg.appendChild(
       makeSVGEl("circle", {
-        cx: 200, cy: 200, r, fill: "none",
-        stroke: s.mobbers[mobberIdx].color,
-        "stroke-width": 1.5, "stroke-opacity": 0.2, "stroke-dasharray": "6 5",
+        cx: 200,
+        cy: 200,
+        r,
+        fill: "none",
+        stroke: qColor,
+        "stroke-width": 1.5,
+        "stroke-opacity": 0.2,
+        "stroke-dasharray": "6 5",
       }),
     );
+    // Echo arc — same progress, fading opacity per ring depth
+    if (progress > 0) {
+      const opacity = Math.max(0.08, 0.22 - qi * 0.06);
+      orbitSvg.appendChild(
+        makeSVGEl("circle", {
+          cx: 200,
+          cy: 200,
+          r,
+          fill: "none",
+          stroke: qColor,
+          "stroke-width": 2.5,
+          "stroke-linecap": "round",
+          "stroke-opacity": opacity,
+          "stroke-dasharray": `${progress * qCirc} ${qCirc}`,
+          transform: "rotate(-90, 200, 200)",
+        }),
+      );
+    }
     // Small white dot at 12 o'clock when a break follows this person's turn
     if (breakEvery > 0 && (totalPos + qi) % breakEvery === 0) {
       orbitSvg.appendChild(
-        makeSVGEl("circle", { cx: 200, cy: 200 - r, r: 4, fill: "rgba(255,255,255,0.7)" }),
+        makeSVGEl("circle", {
+          cx: 200,
+          cy: 200 - r,
+          r: 4,
+          fill: "rgba(255,255,255,0.7)",
+        }),
       );
     }
   }
@@ -316,7 +364,9 @@ function renderRings(s) {
 
 // ── Planet divs — all start at 12 o'clock, active travels clockwise ──────────
 function renderPlanets(s) {
-  orbitArea.querySelectorAll(".planet, .add-planet").forEach((el) => el.remove());
+  orbitArea
+    .querySelectorAll(".planet, .add-planet")
+    .forEach((el) => el.remove());
   const n = s.mobbers.length;
   const H = Math.min(pomodoroHistory.length, MAX_HISTORY);
   const S = PLANET_SIZE;
@@ -359,7 +409,7 @@ function renderPlanets(s) {
   }
 
   // Faded '+' at 12 o'clock on the ring just beyond the last queue member
-  const addR = (BASE_R + H * HIST_SP) + n * QUEUE_SP;
+  const addR = BASE_R + H * HIST_SP + n * QUEUE_SP;
   const addBtn = document.createElement("div");
   addBtn.className = "add-planet";
   addBtn.style.cssText = `left:${200 - S / 2}px; top:${200 - addR - S / 2}px;`;
