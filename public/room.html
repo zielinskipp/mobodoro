@@ -5,498 +5,270 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mobodoro</title>
     <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
+      :root {
+        --active-color:   #667eea;
+        --phase-bg-start: #1a1a2e;
+        --phase-bg-end:   #16213e;
       }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
 
       body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
-          Cantarell, sans-serif;
-        display: flex;
-        justify-content: center;
-        align-items: center;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         min-height: 100vh;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2rem;
+        background: linear-gradient(135deg, var(--phase-bg-start), var(--phase-bg-end));
+        transition: background 0.8s ease;
         color: #fff;
+        padding: 2rem;
       }
 
-      .container {
-        text-align: center;
-        background: rgba(255, 255, 255, 0.1);
-        padding: 3rem;
-        border-radius: 20px;
-        backdrop-filter: blur(10px);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        min-width: 400px;
+      /* ── Orbit area ──────────────────────────────────── */
+      .orbit-area {
+        position: relative;
+        width: 400px;
+        height: 400px;
+        flex-shrink: 0;
       }
 
-      h1 {
-        font-size: 2.5rem;
-        margin-bottom: 2rem;
-        font-weight: 300;
+      /* ── Timer circle ────────────────────────────────── */
+      .timer-circle {
+        position: absolute;
+        width: 180px;
+        height: 180px;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        border: 6px solid var(--active-color);
+        transition: border-color 0.5s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.25);
+        backdrop-filter: blur(8px);
       }
 
-      .timer {
-        font-size: 6rem;
+      #timerDisplay {
+        font-size: 2.8rem;
         font-weight: 700;
-        margin: 2rem 0;
         font-variant-numeric: tabular-nums;
+        letter-spacing: 0.05em;
+      }
+
+      #phaseDisplay {
+        font-size: 0.85rem;
+        opacity: 0.75;
+        margin-top: 2px;
+        text-transform: uppercase;
         letter-spacing: 0.1em;
       }
 
-      .phase {
-        font-size: 1.5rem;
-        margin-bottom: 2rem;
-        text-transform: capitalize;
-        opacity: 0.9;
+      /* ── Avatars ─────────────────────────────────────── */
+      .avatar {
+        position: absolute;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: var(--mobber-color, #555);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        user-select: none;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        z-index: 5;
       }
 
+      .avatar.active {
+        transform: scale(1.3);
+        box-shadow: 0 0 0 4px white, 0 0 16px 6px var(--active-color);
+        z-index: 10;
+      }
+
+      .avatar.add-btn {
+        background: transparent;
+        border: 2px dashed rgba(255,255,255,0.6);
+        font-size: 22px;
+        font-weight: 300;
+        color: rgba(255,255,255,0.7);
+        transition: background 0.2s, color 0.2s;
+      }
+
+      .avatar.add-btn:hover {
+        background: rgba(255,255,255,0.15);
+        color: #fff;
+      }
+
+      /* ── Context menu ────────────────────────────────── */
+      .context-menu {
+        position: absolute;
+        z-index: 30;
+        background: rgba(15,15,20,0.92);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px;
+        overflow: hidden;
+        backdrop-filter: blur(12px);
+        min-width: 130px;
+      }
+
+      .menu-item {
+        padding: 8px 14px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+
+      .menu-item:hover {
+        background: rgba(255,255,255,0.15);
+      }
+
+      /* ── Add form ─────────────────────────────────────── */
+      .add-form {
+        position: absolute;
+        z-index: 20;
+        display: flex;
+        gap: 4px;
+      }
+
+      .add-input, .rename-input {
+        padding: 4px 8px;
+        border-radius: 6px;
+        border: 2px solid rgba(255,255,255,0.6);
+        background: rgba(0,0,0,0.6);
+        color: #fff;
+        font-size: 13px;
+        width: 110px;
+        outline: none;
+      }
+
+      .add-confirm {
+        padding: 4px 8px;
+        border-radius: 6px;
+        border: 2px solid rgba(255,255,255,0.5);
+        background: rgba(255,255,255,0.2);
+        color: #fff;
+        cursor: pointer;
+        font-size: 13px;
+      }
+
+      /* ── Controls ────────────────────────────────────── */
       .controls {
         display: flex;
-        gap: 1rem;
+        gap: 0.75rem;
         justify-content: center;
-        margin-top: 2rem;
+        flex-wrap: wrap;
       }
 
       button {
-        padding: 1rem 2rem;
-        font-size: 1rem;
-        border: 2px solid rgba(255, 255, 255, 0.5);
-        background: rgba(255, 255, 255, 0.2);
+        padding: 0.75rem 1.5rem;
+        font-size: 0.95rem;
+        border: 2px solid rgba(255,255,255,0.5);
+        background: rgba(255,255,255,0.15);
         color: white;
         border-radius: 10px;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: background 0.2s, transform 0.15s;
         font-weight: 500;
       }
 
-      button:hover {
-        background: rgba(255, 255, 255, 0.3);
-        border-color: rgba(255, 255, 255, 0.8);
+      button:hover:not(:disabled) {
+        background: rgba(255,255,255,0.28);
         transform: translateY(-2px);
       }
 
-      button:active {
-        transform: translateY(0);
+      button:disabled {
+        opacity: 0.35;
+        cursor: default;
       }
 
-      .status {
-        margin-top: 2rem;
+      /* ── Config section ──────────────────────────────── */
+      details {
+        background: rgba(255,255,255,0.08);
+        border-radius: 12px;
+        padding: 0.75rem 1.25rem;
+        width: 400px;
+        max-width: 100%;
+      }
+
+      summary {
+        cursor: pointer;
         font-size: 0.9rem;
-        opacity: 0.7;
+        opacity: 0.75;
+        list-style: none;
+        user-select: none;
       }
 
-      .status.connected {
-        color: #4ade80;
+      summary::-webkit-details-marker { display: none; }
+
+      .config-row {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        margin-top: 0.75rem;
+        flex-wrap: wrap;
+        justify-content: center;
       }
 
-      .status.disconnected {
-        color: #f87171;
+      .config-row input[type=number] {
+        width: 80px;
+        padding: 0.4rem;
+        border-radius: 6px;
+        border: 2px solid rgba(255,255,255,0.4);
+        background: rgba(255,255,255,0.15);
+        color: white;
+        text-align: center;
+        font-size: 0.9rem;
       }
+
+      /* ── Status dot ──────────────────────────────────── */
+      .status {
+        font-size: 0.8rem;
+        opacity: 0.6;
+      }
+
+      .status.connected    { color: #4ade80; opacity: 1; }
+      .status.disconnected { color: #f87171; opacity: 1; }
     </style>
   </head>
   <body>
-    <div class="container">
-      <h1>Mobodoro</h1>
-
-      <div class="phase" id="phase">Work</div>
-      <div class="timer" id="timer">25:00</div>
-
-      <div class="controls">
-        <button id="startBtn">Start</button>
-        <button id="pauseBtn">Pause</button>
-        <button id="resetBtn">Reset</button>
-        <button id="skipBtn">Skip Phase ⏭️</button>
+    <!-- Orbit + timer -->
+    <div class="orbit-area" id="orbitArea">
+      <div class="timer-circle" id="timerCircle">
+        <span id="timerDisplay">25:00</span>
+        <span id="phaseDisplay">Work</span>
       </div>
-
-      <!-- Configuration Section -->
-      <div
-        style="
-          margin-top: 2rem;
-          padding: 1.5rem;
-          border-radius: 10px;
-          background: rgba(255, 255, 255, 0.1);
-        "
-      >
-        <h2 style="font-size: 1.2rem; margin-bottom: 1rem; font-weight: 400">
-          Session Configuration
-        </h2>
-        <div class="controls" style="gap: 0.5rem; flex-wrap: wrap">
-          <input
-            type="number"
-            id="workMinutes"
-            placeholder="Work (min)"
-            min="1"
-            max="60"
-            value="25"
-            style="
-              width: 100px;
-              padding: 0.5rem;
-              border-radius: 5px;
-              border: 2px solid rgba(255, 255, 255, 0.5);
-              background: rgba(255, 255, 255, 0.2);
-              color: white;
-              text-align: center;
-            "
-          />
-          <input
-            type="number"
-            id="breakMinutes"
-            placeholder="Break (min)"
-            min="1"
-            max="30"
-            value="5"
-            style="
-              width: 100px;
-              padding: 0.5rem;
-              border-radius: 5px;
-              border: 2px solid rgba(255, 255, 255, 0.5);
-              background: rgba(255, 255, 255, 0.2);
-              color: white;
-              text-align: center;
-            "
-          />
-          <input
-            type="number"
-            id="rotationsBeforeBreak"
-            placeholder="Rotations"
-            min="1"
-            max="10"
-            value="1"
-            style="
-              width: 100px;
-              padding: 0.5rem;
-              border-radius: 5px;
-              border: 2px solid rgba(255, 255, 255, 0.5);
-              background: rgba(255, 255, 255, 0.2);
-              color: white;
-              text-align: center;
-            "
-          />
-          <button id="configureBtn">Apply Config</button>
-        </div>
-        <div
-          style="
-            margin-top: 0.5rem;
-            font-size: 0.8rem;
-            opacity: 0.6;
-            text-align: center;
-          "
-        >
-          Configure before starting or while paused
-        </div>
-      </div>
-
-      <div class="controls" style="margin-top: 1rem; gap: 0.5rem">
-        <input
-          type="number"
-          id="setMinutes"
-          placeholder="Min"
-          min="0"
-          max="59"
-          style="
-            width: 60px;
-            padding: 0.5rem;
-            border-radius: 5px;
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            text-align: center;
-          "
-        />
-        <input
-          type="number"
-          id="setSeconds"
-          placeholder="Sec"
-          min="0"
-          max="59"
-          style="
-            width: 60px;
-            padding: 0.5rem;
-            border-radius: 5px;
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            text-align: center;
-          "
-        />
-        <button id="setTimerBtn">Set Timer</button>
-      </div>
-
-      <!-- Mobbers Section -->
-      <div
-        style="
-          margin-top: 2rem;
-          padding-top: 2rem;
-          border-top: 2px solid rgba(255, 255, 255, 0.2);
-        "
-      >
-        <h2 style="font-size: 1.2rem; margin-bottom: 1rem; font-weight: 400">
-          Mob
-        </h2>
-
-        <div
-          id="currentMobber"
-          style="font-size: 1.5rem; margin-bottom: 1rem; opacity: 0.9"
-        >
-          No mobbers yet
-        </div>
-
-        <div
-          id="mobbersList"
-          style="margin-bottom: 1rem; font-size: 0.9rem; opacity: 0.7"
-        ></div>
-
-        <div class="controls" style="gap: 0.5rem; margin-bottom: 0.5rem">
-          <input
-            type="text"
-            id="mobberNameInput"
-            placeholder="Mobber name"
-            style="
-              flex: 1;
-              padding: 0.5rem;
-              border-radius: 5px;
-              border: 2px solid rgba(255, 255, 255, 0.5);
-              background: rgba(255, 255, 255, 0.2);
-              color: white;
-            "
-          />
-          <button id="addMobberBtn">Add</button>
-        </div>
-
-        <div class="controls" style="gap: 0.5rem">
-          <button id="rotateMobberBtn" style="flex: 1">Next Mobber</button>
-          <button id="removeMobberBtn">Remove Current</button>
-        </div>
-      </div>
-
-      <div class="status" id="status">Connecting...</div>
     </div>
 
-    <script>
-      const timerEl = document.getElementById("timer");
-      const phaseEl = document.getElementById("phase");
-      const statusEl = document.getElementById("status");
-      const startBtn = document.getElementById("startBtn");
-      const pauseBtn = document.getElementById("pauseBtn");
-      const resetBtn = document.getElementById("resetBtn");
-      const skipBtn = document.getElementById("skipBtn");
-      const setTimerBtn = document.getElementById("setTimerBtn");
-      const setMinutesInput = document.getElementById("setMinutes");
-      const setSecondsInput = document.getElementById("setSeconds");
+    <!-- Main controls -->
+    <div class="controls">
+      <button id="startBtn">Start</button>
+      <button id="pauseBtn">Pause</button>
+      <button id="resetBtn">Reset</button>
+      <button id="skipBtn">Skip ⏭</button>
+    </div>
 
-      const configureBtn = document.getElementById("configureBtn");
-      const workMinutesInput = document.getElementById("workMinutes");
-      const breakMinutesInput = document.getElementById("breakMinutes");
-      const rotationsBeforeBreakInput = document.getElementById(
-        "rotationsBeforeBreak",
-      );
+    <!-- Session config (collapsed) -->
+    <details>
+      <summary>▼ Session config</summary>
+      <div class="config-row">
+        <input type="number" id="workMinutes"          min="1" max="60" value="25" title="Work minutes" />
+        <input type="number" id="breakMinutes"         min="1" max="30" value="5"  title="Break minutes" />
+        <input type="number" id="rotationsBeforeBreak" min="1" max="10" value="1"  title="Rotations before break" />
+        <button id="configureBtn">Apply</button>
+      </div>
+    </details>
 
-      const currentMobberEl = document.getElementById("currentMobber");
-      const mobbersListEl = document.getElementById("mobbersList");
-      const mobberNameInput = document.getElementById("mobberNameInput");
-      const addMobberBtn = document.getElementById("addMobberBtn");
-      const rotateMobberBtn = document.getElementById("rotateMobberBtn");
-      const removeMobberBtn = document.getElementById("removeMobberBtn");
+    <div class="status" id="status">Connecting…</div>
 
-      let ws = null;
-      let sessionId = null;
-
-      // Format time display
-      function formatTime(minutes, seconds) {
-        return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-      }
-
-      // Update UI with session state
-      function updateUI(session) {
-        // Store session for other functions to access
-        sessionStorage.setItem("currentSession", JSON.stringify(session));
-
-        timerEl.textContent = formatTime(
-          session.timer.minutes,
-          session.timer.seconds,
-        );
-        phaseEl.textContent =
-          session.phase === "work"
-            ? "Work"
-            : session.phase === "shortBreak"
-              ? "Short Break"
-              : "Long Break";
-
-        // Update configuration inputs
-        workMinutesInput.value = session.duration.minutes;
-        breakMinutesInput.value = session.breakDuration.minutes;
-        rotationsBeforeBreakInput.value = session.rotationsBeforeBreak;
-
-        // Update button states
-        if (session.timer.isRunning) {
-          startBtn.disabled = true;
-          pauseBtn.disabled = false;
-        } else {
-          startBtn.disabled = false;
-          pauseBtn.disabled = true;
-        }
-
-        // Update mobbers display
-        if (session.mobbers && session.mobbers.length > 0) {
-          const currentMobber = session.mobbers[session.currentMobberIndex];
-          currentMobberEl.textContent = `🎯 Current: ${currentMobber}`;
-
-          // Show all mobbers with highlighting for current
-          mobbersListEl.innerHTML = session.mobbers
-            .map((mobber, index) => {
-              const isCurrent = index === session.currentMobberIndex;
-              return `<span style="${isCurrent ? "font-weight: bold; opacity: 1;" : ""}">${isCurrent ? "→ " : ""}${mobber}</span>`;
-            })
-            .join(" • ");
-
-          rotateMobberBtn.disabled = false;
-          removeMobberBtn.disabled = false;
-        } else {
-          currentMobberEl.textContent = "No mobbers yet";
-          mobbersListEl.innerHTML = "";
-          rotateMobberBtn.disabled = true;
-          removeMobberBtn.disabled = true;
-        }
-      }
-
-      // Create session and connect
-      async function init() {
-        try {
-          // Get session ID from URL path: /room/:sessionId
-          const pathParts = window.location.pathname.split("/");
-          sessionId = pathParts[pathParts.length - 1];
-
-          if (!sessionId) {
-            statusEl.textContent = "No room ID in URL";
-            statusEl.className = "status disconnected";
-            return;
-          }
-
-          // Connect WebSocket
-          const protocol =
-            window.location.protocol === "https:" ? "wss:" : "ws:";
-          const wsUrl = `${protocol}//${window.location.host}/ws/${sessionId}`;
-
-          ws = new WebSocket(wsUrl);
-
-          ws.onopen = () => {
-            statusEl.textContent = "Connected";
-            statusEl.className = "status connected";
-          };
-
-          ws.onmessage = (event) => {
-            const session = JSON.parse(event.data);
-            updateUI(session);
-          };
-
-          ws.onclose = () => {
-            statusEl.textContent = "Disconnected";
-            statusEl.className = "status disconnected";
-          };
-
-          ws.onerror = (error) => {
-            console.error("WebSocket error:", error);
-            statusEl.textContent = "Connection error";
-            statusEl.className = "status disconnected";
-          };
-        } catch (error) {
-          console.error("Failed to initialize:", error);
-          statusEl.textContent = "Failed to connect";
-          statusEl.className = "status disconnected";
-        }
-      }
-
-      // Send command to server
-      function sendCommand(command) {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ command }));
-        }
-      }
-
-      // Button handlers
-      startBtn.addEventListener("click", () => sendCommand("start"));
-      pauseBtn.addEventListener("click", () => sendCommand("pause"));
-      resetBtn.addEventListener("click", () => sendCommand("reset"));
-      skipBtn.addEventListener("click", () => sendCommand("skip"));
-
-      configureBtn.addEventListener("click", () => {
-        const workMinutes = parseInt(workMinutesInput.value) || 25;
-        const breakMinutes = parseInt(breakMinutesInput.value) || 5;
-        const rotationsBeforeBreak =
-          parseInt(rotationsBeforeBreakInput.value) || 1;
-
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(
-            JSON.stringify({
-              command: "configure",
-              workMinutes,
-              breakMinutes,
-              rotationsBeforeBreak,
-            }),
-          );
-        }
-      });
-
-      setTimerBtn.addEventListener("click", () => {
-        const minutes = parseInt(setMinutesInput.value) || 0;
-        const seconds = parseInt(setSecondsInput.value) || 0;
-
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(
-            JSON.stringify({
-              command: "setTimer",
-              minutes,
-              seconds,
-            }),
-          );
-        }
-      });
-
-      // Mobber button handlers
-      addMobberBtn.addEventListener("click", () => {
-        const name = mobberNameInput.value.trim();
-        if (name && ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ command: "addMobber", name }));
-          mobberNameInput.value = ""; // Clear input
-        }
-      });
-
-      // Allow Enter key to add mobber
-      mobberNameInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-          addMobberBtn.click();
-        }
-      });
-
-      rotateMobberBtn.addEventListener("click", () => {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ command: "rotateMobber" }));
-        }
-      });
-
-      removeMobberBtn.addEventListener("click", () => {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          // Get current mobber name from session state
-          // We'll need to track this in a variable
-          const currentSession = JSON.parse(
-            sessionStorage.getItem("currentSession") || "{}",
-          );
-          if (currentSession.mobbers && currentSession.mobbers.length > 0) {
-            const currentMobber =
-              currentSession.mobbers[currentSession.currentMobberIndex];
-            ws.send(
-              JSON.stringify({ command: "removeMobber", name: currentMobber }),
-            );
-          }
-        }
-      });
-
-      // Initialize on load
-      init();
-    </script>
+    <script src="/room.js" type="module"></script>
   </body>
 </html>
