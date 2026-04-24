@@ -12,6 +12,7 @@ import {
   handleTimerExpired,
   configureSession,
   skipPhase,
+  type Mobber,
 } from "../src/session";
 
 describe("Session management", () => {
@@ -151,7 +152,9 @@ describe("Mob management", () => {
 
     const withMobber = addMobber(session, "Alice");
 
-    expect(withMobber.mobbers).toEqual(["Alice"]);
+    expect(withMobber.mobbers).toEqual<Mobber[]>([
+      { name: "Alice", color: "#e74c3c" },
+    ]);
   });
 
   it("should remove a mobber from the session", () => {
@@ -160,7 +163,9 @@ describe("Mob management", () => {
 
     const withoutAlice = removeMobber(withMobbers, "Alice");
 
-    expect(withoutAlice.mobbers).toEqual(["Bob"]);
+    expect(withoutAlice.mobbers).toEqual<Mobber[]>([
+      { name: "Bob", color: "#3498db" },
+    ]);
   });
 
   it("should start with first mobber as current", () => {
@@ -322,5 +327,53 @@ describe("Phase transitions", () => {
     expect(afterSkip.phase).toBe("work");
     expect(afterSkip.timer.minutes).toBe(25); // work duration
     expect(afterSkip.timer.seconds).toBe(0);
+  });
+});
+
+describe("Mobber colours", () => {
+  it("should assign the first palette colour to the first mobber added", () => {
+    const session = makeSession();
+
+    const withMobber = addMobber(session, "Alice");
+
+    expect(withMobber.mobbers[0]).toEqual<Mobber>({
+      name: "Alice",
+      color: "#e74c3c",
+    });
+  });
+
+  it("should assign the second palette colour to the second mobber added", () => {
+    const session = makeSession();
+    const withTwo = addMobber(addMobber(session, "Alice"), "Bob");
+
+    expect(withTwo.mobbers[1]).toEqual<Mobber>({
+      name: "Bob",
+      color: "#3498db",
+    });
+  });
+
+  it("should cycle back to the first colour when the palette is exhausted", () => {
+    const PALETTE_SIZE = 8;
+    let session = makeSession();
+    for (let i = 0; i < PALETTE_SIZE; i++) {
+      session = addMobber(session, `Person${i}`);
+    }
+
+    const withExtraMobber = addMobber(session, "Extra");
+
+    expect(withExtraMobber.mobbers[PALETTE_SIZE].color).toBe("#e74c3c");
+  });
+
+  it("should free a colour slot when a mobber is removed so the next addition reuses it", () => {
+    const session = makeSession();
+    const withTwo = addMobber(addMobber(session, "Alice"), "Bob");
+    const withoutAlice = removeMobber(withTwo, "Alice");
+
+    const withCharlie = addMobber(withoutAlice, "Charlie");
+
+    // Bob is the only remaining mobber (index 0) — Charlie takes next slot (index 1)
+    expect(withCharlie.mobbers.find((m) => m.name === "Charlie")?.color).toBe(
+      "#3498db",
+    );
   });
 });

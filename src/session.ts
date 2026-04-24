@@ -10,10 +10,23 @@ export type Duration = {
 };
 export type Phase = "work" | "shortBreak" | "longBreak";
 
+export type Mobber = { readonly name: string; readonly color: string };
+
+const PALETTE = [
+  "#e74c3c",
+  "#3498db",
+  "#2ecc71",
+  "#f39c12",
+  "#9b59b6",
+  "#1abc9c",
+  "#e67e22",
+  "#e91e63",
+];
+
 export type SessionState = {
   id: string;
 
-  mobbers: string[];
+  mobbers: Mobber[];
   currentMobberIndex: number;
 
   phase: Phase;
@@ -145,20 +158,23 @@ export function setTimer(
   };
 }
 
-export function addMobber(session: SessionState, mobber: string): SessionState {
+export function addMobber(session: SessionState, name: string): SessionState {
+  const color = PALETTE[session.mobbers.length % PALETTE.length];
+  const newMobber: Mobber = { name, color };
+
   return {
     ...session,
-    mobbers: [...session.mobbers, mobber],
+    mobbers: [...session.mobbers, newMobber],
   };
 }
 
 export function removeMobber(
   session: SessionState,
-  mobber: string,
+  name: string,
 ): SessionState {
   return {
     ...session,
-    mobbers: session.mobbers.filter((m) => m !== mobber),
+    mobbers: session.mobbers.filter((m) => m.name !== name),
   };
 }
 

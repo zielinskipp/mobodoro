@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createServer } from "../src/server";
 import type { FastifyInstance } from "fastify";
 import WebSocket from "ws";
+import type { Mobber } from "../src/session";
 
 describe("Server integration", () => {
   let server: FastifyInstance;
@@ -300,7 +301,7 @@ describe("Server integration", () => {
       setTimeout(() => reject(new Error("timeout")), 1000);
     });
 
-    expect(updated.mobbers).toEqual(["Alice"]);
+    expect(updated.mobbers).toEqual<Mobber[]>([{ name: "Alice", color: "#e74c3c" }]);
 
     ws.close();
   });
@@ -336,7 +337,7 @@ describe("Server integration", () => {
       setTimeout(() => reject(new Error("timeout")), 1000);
     });
 
-    expect(updated.mobbers).toEqual(["Bob"]);
+    expect(updated.mobbers).toEqual<Mobber[]>([{ name: "Bob", color: "#3498db" }]);
 
     ws.close();
   });
