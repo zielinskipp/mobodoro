@@ -4,6 +4,49 @@ const CX = 200;
 const CY = 200;
 const AVATAR_SIZE = 48;
 
+// ── Audio ─────────────────────────────────────────────────────────────────────
+let audioCtx = null;
+
+// Unlock / create the AudioContext on the first user gesture
+document.addEventListener("click", () => {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  } else if (audioCtx.state === "suspended") {
+    audioCtx.resume();
+  }
+});
+
+function playTone(frequency, duration, type = "sine", gain = 0.25) {
+  if (!audioCtx || audioCtx.state === "suspended") return;
+  const osc = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  osc.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  osc.type = type;
+  osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+  gainNode.gain.setValueAtTime(gain, audioCtx.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(
+    0.0001,
+    audioCtx.currentTime + duration,
+  );
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+// Work phase ended → descending "time's up" chime
+function playWorkDone() {
+  playTone(880, 0.18);
+  setTimeout(() => playTone(660, 0.18), 180);
+  setTimeout(() => playTone(440, 0.35), 360);
+}
+
+// Break ended → ascending "back to work" chime
+function playBreakDone() {
+  playTone(440, 0.18);
+  setTimeout(() => playTone(660, 0.18), 180);
+  setTimeout(() => playTone(880, 0.35), 360);
+}
+
 const PHASE_COLORS = {
   work: { bgStart: null, bgEnd: null, ring: null }, // filled dynamically from active-color
   shortBreak: { bgStart: "#065f46", bgEnd: "#0d9488", ring: "#ffffff" },
@@ -16,6 +59,8 @@ let session = null;
 let activeMenu = null;
 let pomodoroHistory = []; // [{color}] – completed work orbits, this browser session
 let prevDriverKey = null; // `${rotationCount}:${currentMobberIndex}`
+let prevPhase = null; // track phase changes for sound notifications
+let muted = false;
 const MAX_HISTORY = 8;
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────
@@ -32,6 +77,8 @@ const skipBtn = document.getElementById("skipBtn");
 const configureBtn = document.getElementById("configureBtn");
 const settingsBtn = document.getElementById("settingsBtn");
 const settingsPanel = document.getElementById("settingsPanel");
+const copyUrlBtn = document.getElementById("copyUrlBtn");
+const muteBtn = document.getElementById("muteBtn");
 const workMinutesInput = document.getElementById("workMinutes");
 const breakMinutesInput = document.getElementById("breakMinutes");
 const rotationsBeforeBreakInput = document.getElementById(
@@ -471,6 +518,16 @@ function updateUI(s) {
   const activeColor = s.mobbers[s.currentMobberIndex]?.color ?? "#667eea";
   applyPhaseColors(s.phase, activeColor, s.timer.isRunning);
 
+  // Sound notifications on phase transitions
+  if (!muted && prevPhase !== null && prevPhase !== s.phase) {
+    if (prevPhase === "work") {
+      playWorkDone();
+    } else {
+      playBreakDone();
+    }
+  }
+  prevPhase = s.phase;
+
   recordCompletedOrbit(s);
   renderRings(s);
   renderPlanets(s);
@@ -517,6 +574,14 @@ pauseBtn.addEventListener("click", () => sendCommand({ command: "pause" }));
 resetBtn.addEventListener("click", () => sendCommand({ command: "reset" }));
 skipBtn.addEventListener("click", () => sendCommand({ command: "skip" }));
 
+muteBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  muted = !muted;
+  muteBtn.textContent = muted ? "unmute" : "mute";
+  muteBtn.title = muted ? "Unmute sounds" : "Mute sounds";
+  muteBtn.style.opacity = muted ? "1" : "";
+});
+
 configureBtn.addEventListener("click", () => {
   sendCommand({
     command: "configure",
@@ -559,6 +624,34 @@ shortBreaksBeforeLongBreakInput.addEventListener("input", () => {
 document.addEventListener("click", () => {
   closeMenu();
   settingsPanel.classList.remove("open");
+});
+
+// Copy session URL to clipboard
+copyUrlBtn.addEventListener("click", async (e) => {
+  e.stopPropagation();
+  try {
+    await navigator.clipboard.writeText(window.location.href);
+    copyUrlBtn.textContent = "✓";
+    copyUrlBtn.classList.add("copied");
+    setTimeout(() => {
+      copyUrlBtn.textContent = "🔗";
+      copyUrlBtn.classList.remove("copied");
+    }, 1500);
+  } catch {
+    // fallback for environments without clipboard API
+    const input = document.createElement("input");
+    input.value = window.location.href;
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand("copy");
+    input.remove();
+    copyUrlBtn.textContent = "✓";
+    copyUrlBtn.classList.add("copied");
+    setTimeout(() => {
+      copyUrlBtn.textContent = "🔗";
+      copyUrlBtn.classList.remove("copied");
+    }, 1500);
+  }
 });
 
 init();

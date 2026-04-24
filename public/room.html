@@ -429,6 +429,35 @@
         color: #f87171;
         opacity: 1;
       }
+
+      /* ── Copy URL button (fixed top-right, left of settings) ── */
+      .copy-url-btn {
+        position: fixed;
+        top: 1.25rem;
+        right: calc(1.25rem + 44px + 0.75rem);
+        z-index: 50;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        padding: 0;
+        font-size: 1.15rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition:
+          background 0.2s,
+          transform 0.2s,
+          color 0.2s;
+      }
+
+      .copy-url-btn:hover:not(:disabled) {
+        transform: scale(1.15) !important;
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .copy-url-btn.copied {
+        color: #4ade80;
+      }
     </style>
   </head>
   <body>
@@ -455,9 +484,15 @@
       <button id="pauseBtn" title="Pause">⏸</button>
       <button id="resetBtn" title="Reset">↺</button>
       <button id="skipBtn" title="Skip">⏭</button>
+      <button id="muteBtn" title="Mute sounds">mute</button>
     </div>
 
     <div class="status" id="status">Connecting…</div>
+
+    <!-- Copy URL button (fixed top-right, left of settings) -->
+    <button class="copy-url-btn" id="copyUrlBtn" title="Copy session URL">
+      🔗
+    </button>
 
     <!-- Settings button (fixed top-right) -->
     <button class="settings-btn" id="settingsBtn" title="Settings">⚙</button>
