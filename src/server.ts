@@ -88,6 +88,7 @@ export function createServer() {
   fastify.post("/sessions", async (request, reply) => {
     const session = makeSession();
     registry.set(session.id, session);
+    fastify.log.info({ sessionId: session.id }, "session created");
 
     return {
       sessionId: session.id,
@@ -117,6 +118,7 @@ export function createServer() {
         connections.set(id, new Set());
       }
       connections.get(id)!.add(socket);
+      fastify.log.info({ sessionId: id, clients: connections.get(id)!.size }, "client connected");
 
       // Send initial state
       socket.send(JSON.stringify(session));
@@ -126,7 +128,9 @@ export function createServer() {
         const sockets = connections.get(id);
         if (sockets) {
           sockets.delete(socket);
-          if (sockets.size === 0) {
+          const remaining = sockets.size;
+          fastify.log.info({ sessionId: id, clients: remaining }, "client disconnected");
+          if (remaining === 0) {
             connections.delete(id);
           }
         }
@@ -140,6 +144,7 @@ export function createServer() {
           if (current) {
             current = startTimer(current);
             registry.set(id, current);
+            fastify.log.info({ sessionId: id, phase: current.phase }, "timer started");
             broadcast(id);
           }
         }
@@ -148,6 +153,7 @@ export function createServer() {
           if (current) {
             current = pauseTimer(current);
             registry.set(id, current);
+            fastify.log.info({ sessionId: id }, "timer paused");
             broadcast(id);
           }
         }
@@ -166,6 +172,8 @@ export function createServer() {
               workMinutes: message.workMinutes,
               breakMinutes: message.breakMinutes,
               rotationsBeforeBreak: message.rotationsBeforeBreak,
+              longBreakMinutes: message.longBreakMinutes,
+              shortBreaksBeforeLongBreak: message.shortBreaksBeforeLongBreak,
             });
             registry.set(id, current);
             broadcast(id);
@@ -184,6 +192,7 @@ export function createServer() {
           if (current) {
             current = addMobber(current, message.name);
             registry.set(id, current);
+            fastify.log.info({ sessionId: id, name: message.name }, "mobber added");
             broadcast(id);
           }
         }
@@ -192,6 +201,7 @@ export function createServer() {
           if (current) {
             current = removeMobber(current, message.name);
             registry.set(id, current);
+            fastify.log.info({ sessionId: id, name: message.name }, "mobber removed");
             broadcast(id);
           }
         }
@@ -200,6 +210,7 @@ export function createServer() {
           if (current) {
             current = rotateMobber(current);
             registry.set(id, current);
+            fastify.log.info({ sessionId: id, driver: current.mobbers[0] }, "mob rotated");
             broadcast(id);
           }
         }
@@ -208,14 +219,17 @@ export function createServer() {
           if (current) {
             current = renameMobber(current, message.oldName, message.newName);
             registry.set(id, current);
+            fastify.log.info({ sessionId: id, oldName: message.oldName, newName: message.newName }, "mobber renamed");
             broadcast(id);
           }
         }
         if (message.command === "skip") {
           let current = registry.get(id);
           if (current) {
+            const prevPhase = current.phase;
             current = skipPhase(current);
             registry.set(id, current);
+            fastify.log.info({ sessionId: id, from: prevPhase, to: current.phase }, "phase skipped");
             broadcast(id);
           }
         }
