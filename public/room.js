@@ -122,7 +122,10 @@ function angleToPos(angle) {
 }
 
 function initials(name) {
-  return name.slice(0, 2).toUpperCase();
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
 }
 
 // ── Colour helpers ───────────────────────────────────────────────────────────
@@ -191,7 +194,11 @@ function openRenameInline(el, name) {
   input.focus();
   input.select();
 
+  let committed = false;
+
   const commit = () => {
+    if (committed) return;
+    committed = true;
     const newName = input.value.trim();
     input.remove();
     if (newName && newName !== name) {
@@ -203,7 +210,9 @@ function openRenameInline(el, name) {
     if (e.key === "Enter") commit();
     if (e.key === "Escape") input.remove();
   });
-  input.addEventListener("blur", () => input.remove());
+  input.addEventListener("blur", () => {
+    if (!committed) input.remove();
+  });
 }
 
 function openContextMenu(el, name, color) {
