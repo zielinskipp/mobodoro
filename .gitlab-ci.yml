@@ -78,6 +78,9 @@ deploy:
       pm2 save
       "
 
-  only:
-    - main
-  when: manual
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" && $CI_COMMIT_MESSAGE =~ /--deploy/'
+      when: on_success
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+    - when: never
