@@ -14,6 +14,7 @@ import {
   configureSession,
   skipPhase,
   type Mobber,
+  type SessionState,
 } from "../src/session";
 
 describe("Session management", () => {
@@ -413,6 +414,131 @@ describe("Mobber colours", () => {
     expect(withCharlie.mobbers.find((m) => m.name === "Charlie")?.color).toBe(
       "#3498db",
     );
+  });
+});
+
+describe("Long break", () => {
+  it("makeSession should include longBreakDuration, shortBreaksBeforeLongBreak, shortBreakCount", () => {
+    const session = makeSession();
+
+    expect(session.longBreakDuration).toEqual({ minutes: 15, seconds: 0 });
+    expect(session.shortBreaksBeforeLongBreak).toBe(3);
+    expect(session.shortBreakCount).toBe(0);
+  });
+
+  it("short break expiry always returns to work (never goes to longBreak)", () => {
+    const session: SessionState = {
+      ...makeSession(),
+      phase: "shortBreak",
+      timer: { minutes: 0, seconds: 0, isRunning: false },
+      shortBreakCount: 2,         // even if count is high
+      shortBreaksBeforeLongBreak: 3,
+    };
+
+    const result = handleTimerExpired(session);
+
+    expect(result.phase).toBe("work");
+    // shortBreakCount must NOT change on break expiry
+    expect(result.shortBreakCount).toBe(2);
+  });
+
+  it("work expiry goes to short break and increments shortBreakCount", () => {
+    const session: SessionState = {
+      ...makeSession(),
+      phase: "work",
+      timer: { minutes: 0, seconds: 0, isRunning: false },
+      rotationsBeforeBreak: 1,
+      rotationCount: 0,
+      shortBreakCount: 0,
+      shortBreaksBeforeLongBreak: 3,
+    };
+
+    const result = handleTimerExpired(session);
+
+    expect(result.phase).toBe("shortBreak");
+    expect(result.shortBreakCount).toBe(1);
+  });
+
+  it("work expiry goes to long break when shortBreakCount reaches threshold", () => {
+    const session: SessionState = {
+      ...makeSession(),
+      phase: "work",
+      timer: { minutes: 0, seconds: 0, isRunning: false },
+      rotationsBeforeBreak: 1,
+      rotationCount: 0,
+      shortBreakCount: 2,                           // 2 + 1 = 3 >= 3
+      shortBreaksBeforeLongBreak: 3,
+      longBreakDuration: { minutes: 15, seconds: 0 },
+    };
+
+    const result = handleTimerExpired(session);
+
+    expect(result.phase).toBe("longBreak");
+    expect(result.timer.minutes).toBe(15);
+    expect(result.timer.isRunning).toBe(false);
+    expect(result.shortBreakCount).toBe(0);
+  });
+
+  it("should return to work when long break expires and rotate driver", () => {
+    const session = addMobber(addMobber(makeSession(), "Alice"), "Bob");
+    const onLongBreak: SessionState = {
+      ...session,
+      phase: "longBreak",
+      timer: { minutes: 0, seconds: 0, isRunning: false },
+      currentMobberIndex: 0,
+      duration: { minutes: 25, seconds: 0 },
+    };
+
+    const result = handleTimerExpired(onLongBreak);
+
+    expect(result.phase).toBe("work");
+    expect(result.timer.minutes).toBe(25);
+    expect(result.timer.isRunning).toBe(false);
+    expect(result.currentMobberIndex).toBe(1);
+  });
+
+  it("resetTimer in longBreak phase uses longBreakDuration", () => {
+    const session: SessionState = {
+      ...makeSession(),
+      phase: "longBreak",
+      timer: { minutes: 3, seconds: 0, isRunning: true },
+      longBreakDuration: { minutes: 15, seconds: 0 },
+    };
+
+    const reset = resetTimer(session);
+
+    expect(reset.timer.minutes).toBe(15);
+    expect(reset.timer.seconds).toBe(0);
+    expect(reset.timer.isRunning).toBe(false);
+  });
+
+  it("configureSession should set longBreakMinutes and shortBreaksBeforeLongBreak", () => {
+    const session = makeSession();
+
+    const configured = configureSession(session, {
+      workMinutes: 25,
+      breakMinutes: 5,
+      rotationsBeforeBreak: 2,
+      longBreakMinutes: 20,
+      shortBreaksBeforeLongBreak: 4,
+    });
+
+    expect(configured.longBreakDuration).toEqual({ minutes: 20, seconds: 0 });
+    expect(configured.shortBreaksBeforeLongBreak).toBe(4);
+  });
+
+  it("skipPhase from longBreak should return to work", () => {
+    const session: SessionState = {
+      ...makeSession(),
+      phase: "longBreak",
+      timer: { minutes: 10, seconds: 0, isRunning: false },
+      duration: { minutes: 25, seconds: 0 },
+    };
+
+    const result = skipPhase(session);
+
+    expect(result.phase).toBe("work");
+    expect(result.timer.minutes).toBe(25);
   });
 });
 

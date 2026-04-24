@@ -33,8 +33,11 @@ export type SessionState = {
   timer: TimerState;
   duration: Duration;
   breakDuration: Duration;
+  longBreakDuration: Duration;
   rotationsBeforeBreak: number;
   rotationCount: number;
+  shortBreaksBeforeLongBreak: number;
+  shortBreakCount: number;
 };
 
 export function makeSession(): SessionState {
@@ -56,8 +59,14 @@ export function makeSession(): SessionState {
       minutes: 5,
       seconds: 0,
     },
+    longBreakDuration: {
+      minutes: 15,
+      seconds: 0,
+    },
     rotationsBeforeBreak: 1,
     rotationCount: 0,
+    shortBreaksBeforeLongBreak: 3,
+    shortBreakCount: 0,
   };
 }
 
@@ -67,6 +76,8 @@ export function configureSession(
     workMinutes: number;
     breakMinutes: number;
     rotationsBeforeBreak: number;
+    longBreakMinutes?: number;
+    shortBreaksBeforeLongBreak?: number;
   },
 ): SessionState {
   return {
@@ -79,12 +90,18 @@ export function configureSession(
       minutes: config.breakMinutes,
       seconds: 0,
     },
+    longBreakDuration: {
+      minutes: config.longBreakMinutes ?? session.longBreakDuration.minutes,
+      seconds: 0,
+    },
     timer: {
       ...session.timer,
       minutes: config.workMinutes,
       seconds: 0,
     },
     rotationsBeforeBreak: config.rotationsBeforeBreak,
+    shortBreaksBeforeLongBreak:
+      config.shortBreaksBeforeLongBreak ?? session.shortBreaksBeforeLongBreak,
   };
 }
 
@@ -134,7 +151,11 @@ export function pauseTimer(session: SessionState): SessionState {
 
 export function resetTimer(session: SessionState): SessionState {
   const dur =
-    session.phase === "work" ? session.duration : session.breakDuration;
+    session.phase === "work"
+      ? session.duration
+      : session.phase === "longBreak"
+        ? session.longBreakDuration
+        : session.breakDuration;
   return {
     ...session,
     timer: {
@@ -210,31 +231,50 @@ export function handleTimerExpired(session: SessionState): SessionState {
   if (session.phase === "work") {
     const nextRotationCount = session.rotationCount + 1;
 
-    // Check if we've hit the rotation limit - time for a break
-    if (nextRotationCount >= session.rotationsBeforeBreak) {
+    // Not yet time for a break — rotate mobber and keep working
+    if (nextRotationCount < session.rotationsBeforeBreak) {
+      const rotated = rotateMobber(session);
       return {
-        ...session,
-        phase: "shortBreak",
-        timer: {
-          ...session.breakDuration,
-          isRunning: false,
-        },
-        rotationCount: 0,
+        ...rotated,
+        phase: "work",
+        timer: { ...session.duration, isRunning: false },
+        rotationCount: nextRotationCount,
       };
     }
 
-    // Continue working - rotate mobber and increment count
-    const rotated = rotateMobber(session);
+    // Time for a break — decide short or long
+    const nextShortBreakCount = session.shortBreakCount + 1;
+    if (nextShortBreakCount >= session.shortBreaksBeforeLongBreak) {
+      return {
+        ...session,
+        phase: "longBreak",
+        timer: { ...session.longBreakDuration, isRunning: false },
+        rotationCount: 0,
+        shortBreakCount: 0,
+      };
+    }
+    return {
+      ...session,
+      phase: "shortBreak",
+      timer: { ...session.breakDuration, isRunning: false },
+      rotationCount: 0,
+      shortBreakCount: nextShortBreakCount,
+    };
+  }
+
+  // Handle short break expiration — always back to work, rotate driver
+  if (session.phase === "shortBreak") {
+    const rotated =
+      session.mobbers.length > 0 ? rotateMobber(session) : session;
     return {
       ...rotated,
       phase: "work",
       timer: { ...session.duration, isRunning: false },
-      rotationCount: nextRotationCount,
     };
   }
 
-  // Handle break phase expiration - return to work and rotate to next driver
-  if (session.phase === "shortBreak") {
+  // Handle long break expiration - return to work and rotate to next driver
+  if (session.phase === "longBreak") {
     const rotated =
       session.mobbers.length > 0 ? rotateMobber(session) : session;
     return {
