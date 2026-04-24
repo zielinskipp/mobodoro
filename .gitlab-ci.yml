@@ -1,5 +1,6 @@
 stages:
   - build
+  - test
   - deploy
 
 variables:
@@ -11,13 +12,41 @@ variables:
 build:
   stage: build
   image: node:22-alpine
+
   script:
     - npm ci
     - npm run build
+
   artifacts:
     paths:
       - dist/
     expire_in: 1 hour
+
+  cache:
+    key: $CI_COMMIT_REF_SLUG
+    paths:
+      - node_modules/
+
+test:
+  stage: test
+  image: node:22-alpine
+
+  script:
+    - npm ci
+    - npx vitest run --coverage --reporter=verbose
+
+  coverage: '/All files\s+\|\s+([\d.]+)/'
+
+  artifacts:
+    when: always
+    paths:
+      - coverage/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+    expire_in: 1 week
+
   cache:
     key: $CI_COMMIT_REF_SLUG
     paths:
@@ -26,17 +55,20 @@ build:
 deploy:
   stage: deploy
   image: ubuntu:latest
+
   before_script:
     - apt-get update -qy && apt-get install -y openssh-client rsync
     - eval $(ssh-agent -s)
     - printf '%s' "$SSH_PRIVATE_KEY" | base64 -d | ssh-add -
     - mkdir -p ~/.ssh && chmod 700 ~/.ssh
     - ssh-keyscan -p $VPS_PORT $VPS_HOST >> ~/.ssh/known_hosts
+
   script:
     # Upload built artifacts
     - rsync -az --delete -e "ssh -p $VPS_PORT" dist/ $VPS_USER@$VPS_HOST:$APP_DIR/dist/
     - rsync -az --delete -e "ssh -p $VPS_PORT" public/ $VPS_USER@$VPS_HOST:$APP_DIR/public/
     - scp -P $VPS_PORT ecosystem.config.cjs package.json package-lock.json $VPS_USER@$VPS_HOST:$APP_DIR/
+
     # Install prod deps and restart
     - ssh -p $VPS_PORT $VPS_USER@$VPS_HOST "
       source ~/.nvm/nvm.sh &&
@@ -45,5 +77,7 @@ deploy:
       pm2 restart mobodoro || pm2 start ecosystem.config.cjs --env production &&
       pm2 save
       "
+
   only:
     - main
+  when: manual

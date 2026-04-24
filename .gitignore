@@ -1,2 +1,8 @@
 node_modules/
 dist/
+coverage/*
+*spec.md
+AGENTS.md
+backlog.md
+memory.md
+typescript-101.md

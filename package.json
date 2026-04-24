@@ -23,6 +23,7 @@
   "devDependencies": {
     "@types/node": "^25.4.0",
     "@types/ws": "^8.18.1",
+    "@vitest/coverage-v8": "^4.1.5",
     "@vitest/ui": "^4.0.18",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
