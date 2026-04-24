@@ -14,14 +14,13 @@ const PHASE_COLORS = {
 let ws = null;
 let session = null;
 let activeMenu = null;
-let travelerEl = null;
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 const orbitArea = document.getElementById("orbitArea");
+const orbitSvg = document.getElementById("orbitSvg");
 const timerCircle = document.getElementById("timerCircle");
 const timerDisplay = document.getElementById("timerDisplay");
 const phaseDisplay = document.getElementById("phaseDisplay");
-const mobQueue = document.getElementById("mobQueue");
 const statusEl = document.getElementById("status");
 const startBtn = document.getElementById("startBtn");
 const pauseBtn = document.getElementById("pauseBtn");
@@ -209,48 +208,124 @@ function openAddForm(btnEl) {
   });
 }
 
-// ── Traveler dot (shows time progress on orbit track) ────────────────────────
-function renderTraveler(s) {
-  if (!travelerEl) {
-    travelerEl = document.createElement("div");
-    travelerEl.className = "traveler";
-    orbitArea.appendChild(travelerEl);
-  }
-  const TRAVELER_SIZE = 12;
-  const angle = travelingAngle(s) - Math.PI / 2; // 0 = 12 o'clock
-  const x = CX + ORBIT_R * Math.cos(angle);
-  const y = CY + ORBIT_R * Math.sin(angle);
-  travelerEl.style.left = `${x - TRAVELER_SIZE / 2}px`;
-  travelerEl.style.top = `${y - TRAVELER_SIZE / 2}px`;
+// ── SVG helper ────────────────────────────────────────────────────────────────
+function makeSVGEl(tag, attrs) {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
 }
 
-// ── Mob queue (sidebar, horizontal row) ──────────────────────────────────────
-function renderQueue(s) {
-  mobQueue.innerHTML = "";
+// ── Per-user orbit rings + progress arc + dot ────────────────────────────────
+const BASE_R = 100;
+const RING_SPACING = 28;
+const PLANET_SIZE = 26;
+
+function renderRings(s) {
+  orbitSvg.innerHTML = "";
+  const n = s.mobbers.length;
+
+  if (n === 0) {
+    orbitSvg.appendChild(
+      makeSVGEl("circle", {
+        cx: 200,
+        cy: 200,
+        r: BASE_R,
+        fill: "none",
+        stroke: "rgba(255,255,255,0.15)",
+        "stroke-width": 2,
+        "stroke-dasharray": "7 5",
+      }),
+    );
+    return;
+  }
+
+  const rawAngle = travelingAngle(s);
+  const progress = rawAngle / (2 * Math.PI); // 0..1
 
   s.mobbers.forEach((mobber, i) => {
-    const isActive = i === s.currentMobberIndex;
+    const r = BASE_R + i * RING_SPACING;
+    const circ = 2 * Math.PI * r;
+    const active = i === s.currentMobberIndex;
+
+    // Dashed background ring
+    orbitSvg.appendChild(
+      makeSVGEl("circle", {
+        cx: 200,
+        cy: 200,
+        r,
+        fill: "none",
+        stroke: mobber.color,
+        "stroke-width": active ? 2.5 : 1.5,
+        "stroke-opacity": active ? 0.5 : 0.22,
+        "stroke-dasharray": "6 5",
+      }),
+    );
+
+    // Progress arc on active ring — rotate(-90) so 0% starts at 12 o'clock
+    if (active && progress > 0) {
+      orbitSvg.appendChild(
+        makeSVGEl("circle", {
+          cx: 200,
+          cy: 200,
+          r,
+          fill: "none",
+          stroke: mobber.color,
+          "stroke-width": 4,
+          "stroke-linecap": "round",
+          "stroke-dasharray": `${progress * circ} ${circ}`,
+          "stroke-dashoffset": 0,
+          transform: "rotate(-90, 200, 200)",
+        }),
+      );
+    }
+  });
+}
+
+// ── Planet divs — active travels, inactive park at 12 o'clock ────────────────
+function renderPlanets(s) {
+  orbitArea
+    .querySelectorAll(".planet, .add-planet")
+    .forEach((el) => el.remove());
+  const n = s.mobbers.length;
+  // travelingAngle gives 0 at start; subtract π/2 so 0 = 12 o'clock
+  const activeAngle = travelingAngle(s) - Math.PI / 2;
+  const parkedAngle = -Math.PI / 2; // 12 o'clock
+  const S = PLANET_SIZE;
+
+  s.mobbers.forEach((mobber, i) => {
+    const r = BASE_R + i * RING_SPACING;
+    const active = i === s.currentMobberIndex;
+    const angle = active ? activeAngle : parkedAngle;
+    const cx = 200 + r * Math.cos(angle);
+    const cy = 200 + r * Math.sin(angle);
+
     const el = document.createElement("div");
-    el.className = "queue-avatar" + (isActive ? " active" : "");
-    el.style.setProperty("--mobber-color", mobber.color);
+    el.className = "planet" + (active ? " active" : "");
+    el.style.cssText = `--mobber-color:${mobber.color}; left:${cx - S / 2}px; top:${cy - S / 2}px;`;
     el.textContent = initials(mobber.name);
     el.title = mobber.name;
     el.addEventListener("click", (e) => {
       e.stopPropagation();
       openContextMenu(el, mobber.name);
     });
-    mobQueue.appendChild(el);
+    orbitArea.appendChild(el);
   });
 
+  // Faded '+' on the next ring out, at 12 o'clock
+  const lastR = BASE_R + Math.max(n - 1, 0) * RING_SPACING;
+  const addR = lastR + RING_SPACING;
+  const addX = 200 + addR * Math.cos(parkedAngle);
+  const addY = 200 + addR * Math.sin(parkedAngle);
   const addBtn = document.createElement("div");
-  addBtn.className = "queue-avatar add-btn";
+  addBtn.className = "add-planet";
+  addBtn.style.cssText = `left:${addX - S / 2}px; top:${addY - S / 2}px;`;
   addBtn.textContent = "+";
   addBtn.title = "Add mobber";
   addBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     openAddForm(addBtn);
   });
-  mobQueue.appendChild(addBtn);
+  orbitArea.appendChild(addBtn);
 }
 
 // ── Main UI update ────────────────────────────────────────────────────────────
@@ -285,8 +360,8 @@ function updateUI(s) {
   const activeColor = s.mobbers[s.currentMobberIndex]?.color ?? "#667eea";
   applyPhaseColors(s.phase, activeColor, s.timer.isRunning);
 
-  renderTraveler(s);
-  renderQueue(s);
+  renderRings(s);
+  renderPlanets(s);
 }
 
 // ── WebSocket ─────────────────────────────────────────────────────────────────

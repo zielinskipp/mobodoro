@@ -36,19 +36,12 @@
         padding: 2rem;
       }
 
-      /* ── Main row: orbit + sidebar ───────────────────── */
+      /* ── Main row: orbit + queue ─────────────────────── */
       .main-row {
         display: flex;
         flex-direction: row;
         align-items: center;
         gap: 2rem;
-      }
-
-      .side-panel {
-        display: flex;
-        flex-direction: column;
-        gap: 1.25rem;
-        align-items: flex-start;
       }
 
       /* ── Orbit area ──────────────────────────────────── */
@@ -160,84 +153,74 @@
         background: rgba(255, 255, 255, 0.15);
       }
 
-      /* ── Orbit track SVG ──────────────────────────────── */
-      .orbit-track {
+      /* ── Orbit SVG ────────────────────────────────────── */
+      .orbit-svg {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
         pointer-events: none;
+        overflow: visible;
       }
 
-      .orbit-track circle {
-        fill: none;
-        stroke: rgba(255, 255, 255, 0.18);
-        stroke-width: 2;
-        stroke-dasharray: 7 5;
-      }
-
-      /* ── Mob queue ────────────────────────────────────── */
-      .mob-queue {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
-      .queue-avatar {
-        width: 48px;
-        height: 48px;
+      /* ── Orbit planets ────────────────────────────────── */
+      .planet {
+        position: absolute;
+        width: 26px;
+        height: 26px;
         border-radius: 50%;
         background: var(--mobber-color, #555);
         color: #fff;
-        font-size: 14px;
+        font-size: 9px;
         font-weight: 700;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         user-select: none;
-        flex-shrink: 0;
+        z-index: 5;
+        transition:
+          box-shadow 0.3s,
+          top 0.95s linear,
+          left 0.95s linear;
       }
 
-      .queue-avatar.add-btn {
+      .planet.active {
+        box-shadow:
+          0 0 0 3px white,
+          0 0 14px 6px var(--active-color);
+        z-index: 10;
+      }
+
+      .planet:not(.active):hover {
+        filter: brightness(1.3);
+      }
+
+      .add-planet {
+        position: absolute;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
         background: transparent;
-        border: 2px dashed rgba(255, 255, 255, 0.6);
-        font-size: 22px;
+        border: 1.5px dashed rgba(255, 255, 255, 0.25);
+        color: rgba(255, 255, 255, 0.25);
+        font-size: 18px;
         font-weight: 300;
-        color: rgba(255, 255, 255, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 5;
+        line-height: 1;
         transition:
-          background 0.2s,
+          border-color 0.2s,
           color 0.2s;
       }
 
-      .queue-avatar.add-btn:hover {
-        background: rgba(255, 255, 255, 0.15);
-        color: #fff;
-      }
-
-      .queue-avatar.active {
-        transform: scale(1.2);
-        box-shadow:
-          0 0 0 3px white,
-          0 0 12px 4px var(--active-color);
-      }
-
-      /* ── Traveler dot ────────────────────────────────── */
-      .traveler {
-        position: absolute;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: var(--active-color);
-        box-shadow: 0 0 8px 2px var(--active-color);
-        z-index: 3;
-        pointer-events: none;
-        transition:
-          top 0.5s linear,
-          left 0.5s linear;
+      .add-planet:hover {
+        border-color: rgba(255, 255, 255, 0.6);
+        color: rgba(255, 255, 255, 0.7);
       }
 
       /* ── Add form (floating) ─────────────────────────── */
@@ -268,32 +251,41 @@
       /* ── Controls ────────────────────────────────────── */
       .controls {
         display: flex;
-        gap: 0.75rem;
+        gap: 0.25rem;
         justify-content: center;
-        flex-wrap: wrap;
       }
 
       button {
-        padding: 0.6rem 0.9rem;
-        font-size: 1.25rem;
-        border: 2px solid rgba(255, 255, 255, 0.5);
-        background: rgba(255, 255, 255, 0.15);
+        padding: 0.5rem 0.65rem;
+        font-size: 1rem;
+        border: none;
+        background: transparent;
         color: white;
         border-radius: 10px;
         cursor: pointer;
         transition:
-          background 0.2s,
-          transform 0.15s;
+          opacity 0.2s,
+          transform 0.15s,
+          background 0.2s;
         font-weight: 500;
       }
 
-      button:hover:not(:disabled) {
-        background: rgba(255, 255, 255, 0.28);
-        transform: translateY(-2px);
+      .controls button {
+        font-size: 1.5rem;
+        padding: 0.55rem 0.8rem;
+        border-radius: 50%;
+        opacity: 0.35;
+        line-height: 1;
       }
 
-      button:disabled {
-        opacity: 0.35;
+      .controls button:hover:not(:disabled) {
+        opacity: 1;
+        background: rgba(255, 255, 255, 0.1);
+        transform: scale(1.2);
+      }
+
+      .controls button:disabled {
+        opacity: 0.1;
         cursor: default;
       }
 
@@ -441,39 +433,31 @@
   </head>
   <body>
     <div class="main-row">
-      <!-- Orbit + timer -->
+      <!-- Orbit + timer (rings drawn by JS) -->
       <div class="orbit-area" id="orbitArea">
         <svg
-          class="orbit-track"
+          id="orbitSvg"
+          class="orbit-svg"
           viewBox="0 0 400 400"
           xmlns="http://www.w3.org/2000/svg"
-        >
-          <circle cx="200" cy="200" r="160" />
-        </svg>
+        ></svg>
         <div class="timer-circle" id="timerCircle">
           <span id="timerDisplay">25:00</span>
           <span id="phaseDisplay">Work</span>
         </div>
       </div>
-
-      <!-- Right sidebar -->
-      <div class="side-panel">
-        <!-- Mob queue -->
-        <div class="mob-queue" id="mobQueue"></div>
-
-        <!-- Main controls -->
-        <div class="controls">
-          <button id="startBtn" title="Start">▶</button>
-          <button id="pauseBtn" title="Pause">⏸</button>
-          <button id="resetBtn" title="Reset">↺</button>
-          <button id="skipBtn" title="Skip">⏭</button>
-        </div>
-
-        <div class="status" id="status">Connecting…</div>
-      </div>
-      <!-- /.side-panel -->
     </div>
     <!-- /.main-row -->
+
+    <!-- Controls below orbit -->
+    <div class="controls">
+      <button id="startBtn" title="Start">▶</button>
+      <button id="pauseBtn" title="Pause">⏸</button>
+      <button id="resetBtn" title="Reset">↺</button>
+      <button id="skipBtn" title="Skip">⏭</button>
+    </div>
+
+    <div class="status" id="status">Connecting…</div>
 
     <!-- Settings button (fixed top-right) -->
     <button class="settings-btn" id="settingsBtn" title="Settings">⚙</button>
