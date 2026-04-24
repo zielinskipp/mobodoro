@@ -1,11 +1,9 @@
 // ── Constants ────────────────────────────────────────────────────────────────
-const ORBIT_SIZE = 400; // px — orbit-area width/height
-const ORBIT_R = 160; // px — radius from centre to avatar centre
-const CX = 200; // orbit-area centre x
-const CY = 200; // orbit-area centre y
-const AVATAR_SIZE = 48; // px
+const ORBIT_R = 160;
+const CX = 200;
+const CY = 200;
+const AVATAR_SIZE = 48;
 
-// Phase → [bgStart, bgEnd, ringColor]
 const PHASE_COLORS = {
   work: { bgStart: null, bgEnd: null, ring: null }, // filled dynamically from active-color
   shortBreak: { bgStart: "#065f46", bgEnd: "#0d9488", ring: "#ffffff" },
@@ -15,13 +13,15 @@ const PHASE_COLORS = {
 // ── State ────────────────────────────────────────────────────────────────────
 let ws = null;
 let session = null;
-let activeMenu = null; // { name, el } of currently open context menu
+let activeMenu = null;
+let travelerEl = null;
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 const orbitArea = document.getElementById("orbitArea");
 const timerCircle = document.getElementById("timerCircle");
 const timerDisplay = document.getElementById("timerDisplay");
 const phaseDisplay = document.getElementById("phaseDisplay");
+const mobQueue = document.getElementById("mobQueue");
 const statusEl = document.getElementById("status");
 const startBtn = document.getElementById("startBtn");
 const pauseBtn = document.getElementById("pauseBtn");
@@ -34,21 +34,22 @@ const rotationsBeforeBreakInput = document.getElementById(
   "rotationsBeforeBreak",
 );
 
-// ── Geometry helpers ─────────────────────────────────────────────────────────
-function avatarPosition(i, n) {
-  const angle = ((2 * Math.PI) / n) * i - Math.PI / 2;
+// ── Geometry ────────────────────────────────────────────────────────────────────────────
+// progress 0 = 3 o'clock (right), travels clockwise
+function travelingAngle(s) {
+  const durSrc = s.phase === "work" ? s.duration : s.breakDuration;
+  const totalSecs = durSrc.minutes * 60 + durSrc.seconds;
+  const remainingSecs = s.timer.minutes * 60 + s.timer.seconds;
+  const elapsed = totalSecs - remainingSecs;
+  const progress = totalSecs > 0 ? Math.min(elapsed / totalSecs, 1) : 0;
+  return progress * 2 * Math.PI;
+}
+
+function angleToPos(angle) {
   return {
     left: CX + ORBIT_R * Math.cos(angle) - AVATAR_SIZE / 2,
     top: CY + ORBIT_R * Math.sin(angle) - AVATAR_SIZE / 2,
   };
-}
-
-function addButtonPosition(n) {
-  if (n === 0) {
-    // 12 o'clock
-    return { left: CX - AVATAR_SIZE / 2, top: CY - ORBIT_R - AVATAR_SIZE / 2 };
-  }
-  return avatarPosition(n, n + 1);
 }
 
 function initials(name) {
@@ -104,20 +105,20 @@ function closeMenu() {
   }
 }
 
-function openRenameInline(avatarEl, name) {
+function openRenameInline(el, name) {
   closeMenu();
+  const rect = el.getBoundingClientRect();
   const input = document.createElement("input");
   input.className = "rename-input";
   input.value = name;
   input.style.cssText = `
-    position:absolute; z-index:20;
-    top:${avatarEl.style.top}; left:${avatarEl.style.left};
-    width:${AVATAR_SIZE * 2}px; padding:4px 6px;
-    border-radius:6px; border:2px solid white;
-    background:rgba(0,0,0,0.7); color:white; font-size:13px;
-    transform:translateX(-25%);
+    position:fixed; z-index:100;
+    top:${rect.top}px; left:${rect.left}px;
+    width:${AVATAR_SIZE * 2}px; height:${AVATAR_SIZE}px;
+    padding:4px 6px; border-radius:6px; border:2px solid white;
+    background:rgba(0,0,0,0.85); color:white; font-size:13px;
   `;
-  orbitArea.appendChild(input);
+  document.body.appendChild(input);
   input.focus();
   input.select();
 
@@ -136,20 +137,17 @@ function openRenameInline(avatarEl, name) {
   input.addEventListener("blur", () => input.remove());
 }
 
-function openContextMenu(avatarEl, name) {
+function openContextMenu(el, name) {
   if (activeMenu && activeMenu.name === name) {
     closeMenu();
     return;
   }
   closeMenu();
 
+  const rect = el.getBoundingClientRect();
   const menu = document.createElement("div");
   menu.className = "context-menu";
-  const pos = {
-    top: parseInt(avatarEl.style.top) + AVATAR_SIZE + 4,
-    left: parseInt(avatarEl.style.left),
-  };
-  menu.style.cssText = `top:${pos.top}px; left:${pos.left}px;`;
+  menu.style.cssText = `position:fixed; z-index:100; top:${rect.bottom + 4}px; left:${rect.left}px;`;
 
   menu.innerHTML = `
     <div class="menu-item" data-action="rename">✏ Rename</div>
@@ -160,14 +158,14 @@ function openContextMenu(avatarEl, name) {
     const action = e.target.closest("[data-action]")?.dataset.action;
     if (action === "rename") {
       closeMenu();
-      openRenameInline(avatarEl, name);
+      openRenameInline(el, name);
     } else if (action === "remove") {
       closeMenu();
       sendCommand({ command: "removeMobber", name });
     }
   });
 
-  orbitArea.appendChild(menu);
+  document.body.appendChild(menu);
   activeMenu = { name, el: menu };
 }
 
@@ -175,20 +173,17 @@ function openContextMenu(avatarEl, name) {
 function openAddForm(btnEl) {
   if (document.querySelector(".add-form")) return;
 
+  const rect = btnEl.getBoundingClientRect();
   const form = document.createElement("div");
   form.className = "add-form";
-  form.style.cssText = `
-    position:absolute; z-index:20;
-    top:${parseInt(btnEl.style.top) + AVATAR_SIZE + 4}px;
-    left:${parseInt(btnEl.style.left)}px;
-  `;
+  form.style.cssText = `position:fixed; z-index:100; top:${rect.bottom + 4}px; left:${rect.left}px;`;
   form.innerHTML = `
-    <input class="add-input" placeholder="Name…" autocomplete="off" />
-    <button class="add-confirm">✓</button>
+    <input class="queue-input" placeholder="Name…" autocomplete="off" style="width:100px;" />
+    <button class="add-confirm" style="padding:0.3rem 0.6rem; font-size:1rem;">✓</button>
   `;
-  orbitArea.appendChild(form);
+  document.body.appendChild(form);
 
-  const input = form.querySelector(".add-input");
+  const input = form.querySelector(".queue-input");
   input.focus();
 
   const commit = () => {
@@ -202,54 +197,53 @@ function openAddForm(btnEl) {
     if (e.key === "Enter") commit();
     if (e.key === "Escape") form.remove();
   });
-  input.addEventListener("blur", (e) => {
-    // blur fires before confirm click, so let the click handle it
+  input.addEventListener("blur", () => {
     setTimeout(() => form.remove(), 150);
   });
 }
 
-// ── Orbit rendering ───────────────────────────────────────────────────────────
-function renderOrbit(s) {
-  // Remove all avatars, menus, add-forms (keep timer-circle)
-  orbitArea
-    .querySelectorAll(".avatar, .add-btn, .context-menu, .add-form")
-    .forEach((el) => el.remove());
+// ── Traveler dot (shows time progress on orbit track) ────────────────────────
+function renderTraveler(s) {
+  if (!travelerEl) {
+    travelerEl = document.createElement("div");
+    travelerEl.className = "traveler";
+    orbitArea.appendChild(travelerEl);
+  }
+  const TRAVELER_SIZE = 12;
+  const angle = travelingAngle(s) - Math.PI / 2; // 0 = 12 o'clock
+  const x = CX + ORBIT_R * Math.cos(angle);
+  const y = CY + ORBIT_R * Math.sin(angle);
+  travelerEl.style.left = `${x - TRAVELER_SIZE / 2}px`;
+  travelerEl.style.top = `${y - TRAVELER_SIZE / 2}px`;
+}
 
-  const n = s.mobbers.length;
+// ── Mob queue (sidebar, horizontal row) ──────────────────────────────────────
+function renderQueue(s) {
+  mobQueue.innerHTML = "";
 
-  // Render mobbers
   s.mobbers.forEach((mobber, i) => {
-    const pos = avatarPosition(i, n);
     const isActive = i === s.currentMobberIndex;
-
     const el = document.createElement("div");
-    el.className = "avatar" + (isActive ? " active" : "");
-    el.dataset.name = mobber.name;
-    el.style.cssText = `
-      --mobber-color:${mobber.color};
-      top:${pos.top}px; left:${pos.left}px;
-    `;
+    el.className = "queue-avatar" + (isActive ? " active" : "");
+    el.style.setProperty("--mobber-color", mobber.color);
     el.textContent = initials(mobber.name);
-
+    el.title = mobber.name;
     el.addEventListener("click", (e) => {
       e.stopPropagation();
       openContextMenu(el, mobber.name);
     });
-
-    orbitArea.appendChild(el);
+    mobQueue.appendChild(el);
   });
 
-  // Render add button
-  const addPos = addButtonPosition(n);
   const addBtn = document.createElement("div");
-  addBtn.className = "avatar add-btn";
-  addBtn.style.cssText = `top:${addPos.top}px; left:${addPos.left}px;`;
+  addBtn.className = "queue-avatar add-btn";
   addBtn.textContent = "+";
+  addBtn.title = "Add mobber";
   addBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     openAddForm(addBtn);
   });
-  orbitArea.appendChild(addBtn);
+  mobQueue.appendChild(addBtn);
 }
 
 // ── Main UI update ────────────────────────────────────────────────────────────
@@ -281,8 +275,8 @@ function updateUI(s) {
   const activeColor = s.mobbers[s.currentMobberIndex]?.color ?? "#667eea";
   applyPhaseColors(s.phase, activeColor, s.timer.isRunning);
 
-  // Orbit
-  renderOrbit(s);
+  renderTraveler(s);
+  renderQueue(s);
 }
 
 // ── WebSocket ─────────────────────────────────────────────────────────────────
