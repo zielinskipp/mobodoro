@@ -28,10 +28,17 @@ const pauseBtn = document.getElementById("pauseBtn");
 const resetBtn = document.getElementById("resetBtn");
 const skipBtn = document.getElementById("skipBtn");
 const configureBtn = document.getElementById("configureBtn");
+const settingsBtn = document.getElementById("settingsBtn");
+const settingsPanel = document.getElementById("settingsPanel");
 const workMinutesInput = document.getElementById("workMinutes");
 const breakMinutesInput = document.getElementById("breakMinutes");
 const rotationsBeforeBreakInput = document.getElementById(
   "rotationsBeforeBreak",
+);
+const workMinutesVal = document.getElementById("workMinutesVal");
+const breakMinutesVal = document.getElementById("breakMinutesVal");
+const rotationsBeforeBreakVal = document.getElementById(
+  "rotationsBeforeBreakVal",
 );
 
 // ── Geometry ────────────────────────────────────────────────────────────────────────────
@@ -270,6 +277,9 @@ function updateUI(s) {
   workMinutesInput.value = s.duration.minutes;
   breakMinutesInput.value = s.breakDuration.minutes;
   rotationsBeforeBreakInput.value = s.rotationsBeforeBreak;
+  workMinutesVal.textContent = s.duration.minutes;
+  breakMinutesVal.textContent = s.breakDuration.minutes;
+  rotationsBeforeBreakVal.textContent = s.rotationsBeforeBreak;
 
   // Colours
   const activeColor = s.mobbers[s.currentMobberIndex]?.color ?? "#667eea";
@@ -329,7 +339,29 @@ configureBtn.addEventListener("click", () => {
   });
 });
 
-// Close menus on backdrop click
-document.addEventListener("click", () => closeMenu());
+// Settings panel toggle
+settingsBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  settingsPanel.classList.toggle("open");
+});
+
+settingsPanel.addEventListener("click", (e) => e.stopPropagation());
+
+// Live slider previews
+workMinutesInput.addEventListener("input", () => {
+  workMinutesVal.textContent = workMinutesInput.value;
+});
+breakMinutesInput.addEventListener("input", () => {
+  breakMinutesVal.textContent = breakMinutesInput.value;
+});
+rotationsBeforeBreakInput.addEventListener("input", () => {
+  rotationsBeforeBreakVal.textContent = rotationsBeforeBreakInput.value;
+});
+
+// Close menus and settings panel on backdrop click
+document.addEventListener("click", () => {
+  closeMenu();
+  settingsPanel.classList.remove("open");
+});
 
 init();
