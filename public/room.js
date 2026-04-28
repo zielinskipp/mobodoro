@@ -33,6 +33,12 @@ function playTone(frequency, duration, type = "sine", gain = 0.25) {
   osc.stop(audioCtx.currentTime + duration);
 }
 
+// Mobber rotation → quick ascending two-note handoff ping (triangle wave)
+function playRotation() {
+  playTone(523, 0.12, "triangle", 0.2);
+  setTimeout(() => playTone(784, 0.2, "triangle", 0.2), 130);
+}
+
 // Work phase ended → descending "time's up" chime
 function playWorkDone() {
   playTone(880, 0.18);
@@ -320,6 +326,7 @@ function recordCompletedOrbit(s) {
     const prevIdx = parseInt(prevDriverKey.split(":")[1]);
     const m = s.mobbers[prevIdx];
     if (m) pomodoroHistory.push({ color: m.color });
+    if (!muted) playRotation();
   }
   prevDriverKey = key;
 }
